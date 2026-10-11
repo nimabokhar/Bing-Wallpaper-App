@@ -6,41 +6,59 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import kotlin.math.roundToInt
 
+/** Where to apply a wallpaper. */
+enum class WallpaperTarget(val flags: Int) {
+    BOTH(WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK),
+    HOME(WallpaperManager.FLAG_SYSTEM),
+    LOCK(WallpaperManager.FLAG_LOCK),
+}
+
 object WallpaperSetter {
     private const val PREFS = "wallpaper"
-    private const val KEY_LAST_ID = "last_id"
+    // Newest Bing image the daily update has already handled. The daily update
+    // only changes the wallpaper when Bing publishes something newer, so a
+    // manually picked older image isn't overwritten until the next new one.
+    private const val KEY_SEEN_NEWEST_ID = "last_id"
     private const val KEY_LAST_TITLE = "last_title"
     private const val KEY_LAST_TIME = "last_time"
 
     /**
-     * Downloads today's Bing image and applies it to the home and lock screen.
-     * Returns the applied image, or null if it was already applied and [force] is false.
+     * Applies the newest Bing image to the home and lock screen. Returns the
+     * applied image, or null if it was already handled and [force] is false.
      */
-    fun applyToday(context: Context, force: Boolean): BingImage? {
+    fun applyNewest(context: Context, force: Boolean): BingImage? {
         val image = BingApi.fetchImageOfTheDay(Settings.market(context))
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        if (!force && prefs.getString(KEY_LAST_ID, null) == image.id) return null
-
-        val bitmap = BingApi.downloadBitmap(image)
-        val manager = WallpaperManager.getInstance(context)
-        val crop = centerCropFor(context, bitmap)
-        manager.setBitmap(bitmap, crop, true, WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK)
-        bitmap.recycle()
-
-        prefs.edit()
-            .putString(KEY_LAST_ID, image.id)
-            .putString(KEY_LAST_TITLE, image.title)
-            .putLong(KEY_LAST_TIME, System.currentTimeMillis())
-            .apply()
+        if (!force && prefs(context).getString(KEY_SEEN_NEWEST_ID, null) == image.id) return null
+        apply(context, image, WallpaperTarget.BOTH)
+        markNewestSeen(context, image.id)
         return image
     }
 
+    /** Downloads [image] at full size and applies it to [target]. */
+    fun apply(context: Context, image: BingImage, target: WallpaperTarget) {
+        val bitmap = BingApi.downloadBitmap(image)
+        val crop = centerCropFor(context, bitmap)
+        WallpaperManager.getInstance(context).setBitmap(bitmap, crop, true, target.flags)
+        bitmap.recycle()
+
+        prefs(context).edit()
+            .putString(KEY_LAST_TITLE, image.title)
+            .putLong(KEY_LAST_TIME, System.currentTimeMillis())
+            .apply()
+    }
+
+    fun markNewestSeen(context: Context, id: String) {
+        prefs(context).edit().putString(KEY_SEEN_NEWEST_ID, id).apply()
+    }
+
     fun lastApplied(context: Context): Pair<String, Long>? {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val prefs = prefs(context)
         val time = prefs.getLong(KEY_LAST_TIME, 0L)
         if (time == 0L) return null
         return (prefs.getString(KEY_LAST_TITLE, null) ?: "") to time
     }
+
+    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     /** Crop hint that keeps the centre of the image at the screen's aspect ratio. */
     private fun centerCropFor(context: Context, bitmap: Bitmap): Rect {

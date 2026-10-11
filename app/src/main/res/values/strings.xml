@@ -1,14 +1,20 @@
 <resources>
     <string name="app_name">Bing Wallpaper</string>
-    <string name="set_now">Set wallpaper now</string>
+    <string name="set_now">Set today\'s image now</string>
     <string name="daily_updates">Update daily (home and lock screen)</string>
-    <string name="loading">Loading today\'s image…</string>
-    <string name="load_failed">Couldn\'t load today\'s image. Check your connection.</string>
-    <string name="setting">Setting wallpaper…</string>
-    <string name="set_done">Wallpaper set on home and lock screen.</string>
-    <string name="set_failed">Couldn\'t set the wallpaper: %1$s</string>
     <string name="region">Bing region</string>
     <string name="region_automatic">Automatic (%1$s)</string>
+    <string name="latest_images">Latest images</string>
+    <string name="gallery_hint">Tap an image to set it as your wallpaper.</string>
+    <string name="loading">Loading images…</string>
+    <string name="load_failed">Couldn\'t load images. Check your connection.</string>
+    <string name="set_where">Set \"%1$s\" on</string>
+    <string name="target_both">Home and lock screen</string>
+    <string name="target_home">Home screen</string>
+    <string name="target_lock">Lock screen</string>
+    <string name="setting">Setting wallpaper…</string>
+    <string name="set_done">Wallpaper set: %1$s</string>
+    <string name="set_failed">Couldn\'t set the wallpaper: %1$s</string>
     <string name="last_applied">Last applied: %1$s</string>
     <string name="never_applied">No wallpaper applied yet.</string>
 </resources>

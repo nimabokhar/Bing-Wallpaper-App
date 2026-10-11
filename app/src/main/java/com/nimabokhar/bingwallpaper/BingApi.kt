@@ -13,10 +13,14 @@ data class BingImage(
     val id: String,
     val title: String,
     val copyright: String,
+    /** Day the image was Bing's image of the day, as yyyyMMdd. */
+    val startDate: String,
     /** Portrait image sized for phones. */
     val portraitUrl: String,
     /** Landscape image Bing shows on its home page, used if portrait fails. */
     val fallbackUrl: String,
+    /** Small portrait version for the gallery. */
+    val thumbnailUrl: String,
 )
 
 object BingApi {
@@ -47,18 +51,34 @@ object BingApi {
         return MARKETS.firstOrNull { it.first.equals(tag, ignoreCase = true) }?.first ?: DEFAULT_MARKET
     }
 
-    fun fetchImageOfTheDay(market: String): BingImage {
-        val json = JSONObject(httpGet("$BASE/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=$market").decodeToString())
-        val image = json.getJSONArray("images").getJSONObject(0)
-        val urlBase = image.getString("urlbase")
-        return BingImage(
-            id = urlBase.substringAfter("id=", urlBase),
-            title = image.optString("title"),
-            copyright = image.optString("copyright"),
-            portraitUrl = "$BASE${urlBase}_1080x1920.jpg",
-            fallbackUrl = BASE + image.getString("url"),
-        )
+    /** Bing's archive only goes back this many days. */
+    const val MAX_IMAGES = 8
+
+    fun fetchImageOfTheDay(market: String): BingImage = fetchLatest(market, 1).first()
+
+    /** The latest images, newest first. */
+    fun fetchLatest(market: String, count: Int = MAX_IMAGES): List<BingImage> {
+        val json = JSONObject(httpGet("$BASE/HPImageArchive.aspx?format=js&idx=0&n=$count&mkt=$market").decodeToString())
+        val images = json.getJSONArray("images")
+        return (0 until images.length()).map { i ->
+            val image = images.getJSONObject(i)
+            val urlBase = image.getString("urlbase")
+            BingImage(
+                id = urlBase.substringAfter("id=", urlBase),
+                title = image.optString("title"),
+                copyright = image.optString("copyright"),
+                startDate = image.optString("startdate"),
+                portraitUrl = "$BASE${urlBase}_1080x1920.jpg",
+                fallbackUrl = BASE + image.getString("url"),
+                thumbnailUrl = "$BASE${urlBase}_480x800.jpg",
+            )
+        }
     }
+
+    fun downloadThumbnail(image: BingImage): Bitmap? = runCatching {
+        val bytes = httpGet(image.thumbnailUrl)
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    }.getOrNull()
 
     fun downloadBitmap(image: BingImage): Bitmap {
         for (url in listOf(image.portraitUrl, image.fallbackUrl)) {

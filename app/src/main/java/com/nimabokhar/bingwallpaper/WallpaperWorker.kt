@@ -17,7 +17,7 @@ class WallpaperWorker(context: Context, params: WorkerParameters) : CoroutineWor
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
-            val applied = WallpaperSetter.applyToday(applicationContext, force = false)
+            val applied = WallpaperSetter.applyNewest(applicationContext, force = false)
             Log.i(TAG, if (applied != null) "Applied ${applied.id}" else "Already up to date")
             Result.success()
         } catch (e: Exception) {

@@ -1,5 +1,6 @@
 package com.nimabokhar.bingwallpaper
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.View
@@ -7,30 +8,35 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var preview: ImageView
-    private lateinit var titleView: TextView
-    private lateinit var copyright: TextView
+    private lateinit var gallery: LinearLayout
+    private lateinit var galleryMessage: TextView
     private lateinit var setNow: Button
     private lateinit var status: TextView
+    private var galleryJob: Job? = null
+    private var settingWallpaper = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        preview = findViewById(R.id.preview)
-        titleView = findViewById(R.id.title)
-        copyright = findViewById(R.id.copyright)
+        gallery = findViewById(R.id.gallery)
+        galleryMessage = findViewById(R.id.galleryMessage)
         setNow = findViewById(R.id.setNow)
         status = findViewById(R.id.status)
 
@@ -38,12 +44,11 @@ class MainActivity : ComponentActivity() {
         dailySwitch.isChecked = Settings.isDailyEnabled(this)
         dailySwitch.setOnCheckedChangeListener { _, checked -> Settings.setDailyEnabled(this, checked) }
 
-        setNow.setOnClickListener { setWallpaperNow() }
+        setNow.setOnClickListener { setTodayNow() }
 
         setUpRegionPicker()
-
         showLastApplied()
-        loadPreview()
+        loadGallery()
     }
 
     private fun setUpRegionPicker() {
@@ -63,41 +68,95 @@ class MainActivity : ComponentActivity() {
                 val market = if (position == 0) null else BingApi.MARKETS[position - 1].first
                 if (market == Settings.chosenMarket(this@MainActivity)) return
                 Settings.setChosenMarket(this@MainActivity, market)
-                loadPreview()
+                loadGallery()
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
     }
 
-    private fun loadPreview() {
-        titleView.setText(R.string.loading)
-        copyright.text = ""
-        lifecycleScope.launch {
-            try {
-                val (image, bitmap) = withContext(Dispatchers.IO) {
-                    val image = BingApi.fetchImageOfTheDay(Settings.market(applicationContext))
-                    image to BingApi.downloadBitmap(image)
-                }
-                preview.setImageBitmap(bitmap)
-                titleView.text = image.title
-                copyright.text = image.copyright
+    private fun loadGallery() {
+        galleryJob?.cancel()
+        gallery.removeAllViews()
+        galleryMessage.setText(R.string.loading)
+        galleryJob = lifecycleScope.launch {
+            val images = try {
+                withContext(Dispatchers.IO) { BingApi.fetchLatest(Settings.market(applicationContext)) }
             } catch (e: Exception) {
-                titleView.setText(R.string.load_failed)
+                galleryMessage.setText(R.string.load_failed)
+                return@launch
+            }
+            galleryMessage.setText(R.string.gallery_hint)
+
+            // Two images per row.
+            val thumbs = images.chunked(2).flatMap { pair ->
+                val row = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL }
+                gallery.addView(row)
+                val views = pair.map { image -> addItem(row, image) }
+                // Keep an odd last image at half width.
+                if (pair.size == 1) row.addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 0, 1f))
+                views
+            }
+
+            for ((image, thumb) in images.zip(thumbs)) {
+                launch {
+                    withContext(Dispatchers.IO) { BingApi.downloadThumbnail(image) }?.let(thumb::setImageBitmap)
+                }
             }
         }
     }
 
-    private fun setWallpaperNow() {
+    /** Adds a gallery item for [image] to [row] and returns its thumbnail view. */
+    private fun addItem(row: LinearLayout, image: BingImage): ImageView {
+        val item = layoutInflater.inflate(R.layout.item_image, row, false)
+        item.findViewById<TextView>(R.id.itemTitle).text = image.title.ifBlank { image.copyright }
+        item.findViewById<TextView>(R.id.itemDate).text = formatDate(image.startDate)
+        item.setOnClickListener { chooseTarget(image) }
+        row.addView(item)
+        return item.findViewById(R.id.thumb)
+    }
+
+    private fun chooseTarget(image: BingImage) {
+        if (settingWallpaper) return
+        val targets = WallpaperTarget.entries
+        val labels = targets.map {
+            getString(
+                when (it) {
+                    WallpaperTarget.BOTH -> R.string.target_both
+                    WallpaperTarget.HOME -> R.string.target_home
+                    WallpaperTarget.LOCK -> R.string.target_lock
+                }
+            )
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.set_where, image.title.ifBlank { formatDate(image.startDate) }))
+            .setItems(labels) { _, which -> setWallpaper { WallpaperSetter.apply(applicationContext, image, targets[which]); image } }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun setTodayNow() {
+        setWallpaper { WallpaperSetter.applyNewest(applicationContext, force = true)!! }
+    }
+
+    private fun setWallpaper(action: () -> BingImage) {
+        if (settingWallpaper) return
+        settingWallpaper = true
         setNow.isEnabled = false
         status.setText(R.string.setting)
         lifecycleScope.launch {
             try {
-                withContext(Dispatchers.IO) { WallpaperSetter.applyToday(applicationContext, force = true) }
-                status.setText(R.string.set_done)
+                val image = withContext(Dispatchers.IO) {
+                    // Picking an image by hand counts as handling today's image, so the
+                    // daily update leaves it alone until Bing publishes a newer one.
+                    val newest = BingApi.fetchImageOfTheDay(Settings.market(applicationContext))
+                    action().also { WallpaperSetter.markNewestSeen(applicationContext, newest.id) }
+                }
+                status.text = getString(R.string.set_done, image.title)
             } catch (e: Exception) {
                 status.text = getString(R.string.set_failed, e.message ?: e.javaClass.simpleName)
             } finally {
+                settingWallpaper = false
                 setNow.isEnabled = true
             }
         }
@@ -112,4 +171,9 @@ class MainActivity : ComponentActivity() {
             getString(R.string.last_applied, "${last.first} ($whenText)")
         }
     }
+
+    private fun formatDate(yyyyMMdd: String): String = runCatching {
+        val date = SimpleDateFormat("yyyyMMdd", Locale.US).parse(yyyyMMdd)!!
+        DateFormat.getDateInstance(DateFormat.MEDIUM).format(date)
+    }.getOrDefault(yyyyMMdd)
 }
