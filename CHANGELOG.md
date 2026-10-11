@@ -6,11 +6,17 @@ While the apps are in alpha, expect rough edges and changes between builds.
 
 ## [Unreleased]
 
+## [0.2.0-alpha.1] - 2026-10-11
+
+A new look for the Android app, a scrolling gallery and resolution choice on Android, and the first Linux version.
+
 ### Android
 
 - New Material 3 design: today's image fills the top of the screen, with a "Set as wallpaper" button on it; the daily change and its time sit in one card; recent images show as a rounded grid with titles on the pictures. On Android 12 and newer the app's colours follow your wallpaper (Material You).
 - Region, image resolution and theme moved into a Settings sheet behind the gear icon, where the version is shown too. Choosing home, lock or both screens is a bottom sheet.
 - Smoother scrolling: images are decoded at the size they're shown, off the main thread, and kept on disk, so they appear instantly when you come back.
+- The gallery loads older images as you scroll, back through every image Bing still has (about two weeks), instead of only the last 8.
+- Choose the image size: 4K UHD (default), 1920×1080, 1366×768 or 1080×1920 portrait.
 
 ### Linux
 
