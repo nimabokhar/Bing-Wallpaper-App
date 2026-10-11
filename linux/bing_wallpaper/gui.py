@@ -32,9 +32,10 @@ TARGET_LABELS = [
 THEMES = [("system", "System"), ("light", "Light"), ("dark", "Dark")]
 WHEN_OPTIONS = ["As soon as Bing publishes", "At a set time"]
 
-#: Gallery cards are portrait, about 2:3, and always this size so loading an image
-#: never changes the layout.
-CARD_WIDTH, CARD_HEIGHT = 180, 270
+#: Gallery cards are wide, at the wallpaper's 16:9 shape, and always this size so
+#: loading an image never changes the layout.
+CARD_WIDTH, CARD_HEIGHT = 400, 225
+CARD_IMAGE = "1280x720"
 #: The hero is decoded at this width; GTK scales it the rest of the way.
 HERO_DECODE_WIDTH = 1600
 FADE_MS = 180
@@ -59,7 +60,8 @@ def _in_background(work: Callable[[], object], done: Callable[[object, Optional[
             value, error = work(), None
         except Exception as e:  # shown to the user
             value, error = None, e
-        GLib.idle_add(lambda: (done(value, error), False)[1])
+        # Default priority, not idle: idle callbacks wait behind every redraw.
+        GLib.idle_add(lambda: (done(value, error), False)[1], priority=GLib.PRIORITY_DEFAULT)
 
     threading.Thread(target=runner, daemon=True).start()
 
@@ -113,7 +115,7 @@ class TextureLoader:
                     str(path), max(1, int(w * scale)), max(1, int(h * scale)), True
                 )
             except Exception:
-                GLib.idle_add(lambda: (done(None), False)[1])
+                GLib.idle_add(lambda: (done(None), False)[1], priority=GLib.PRIORITY_DEFAULT)
                 return
 
             def hand_over() -> bool:
@@ -124,7 +126,7 @@ class TextureLoader:
                 done(texture)
                 return False
 
-            GLib.idle_add(hand_over)
+            GLib.idle_add(hand_over, priority=GLib.PRIORITY_DEFAULT)
 
         self.disk.get(url).add_done_callback(lambda f: self.decoder.submit(decode, f))
 
@@ -154,7 +156,7 @@ class Window(Adw.ApplicationWindow):
         disk: Optional[imagecache.DiskCache] = None,
     ) -> None:
         super().__init__(application=app, title="Bing Wallpaper")
-        self.set_default_size(1000, 820)
+        self.set_default_size(1100, 880)
         self.fetch_page = fetch_page
         self.apply_image = apply
         self.set_daily_time = set_daily_time
@@ -193,8 +195,8 @@ class Window(Adw.ApplicationWindow):
         self.grid = Gtk.FlowBox(
             selection_mode=Gtk.SelectionMode.NONE,
             homogeneous=True,
-            min_children_per_line=2,
-            max_children_per_line=10,
+            min_children_per_line=1,
+            max_children_per_line=4,
             row_spacing=14,
             column_spacing=14,
             valign=Gtk.Align.START,
@@ -264,7 +266,7 @@ class Window(Adw.ApplicationWindow):
 
     def size_hero(self) -> None:
         height = self.get_default_size()[1] or 820
-        self.hero.set_size_request(-1, max(280, int(height * 0.45)))
+        self.hero.set_size_request(-1, max(320, int(height * 0.55)))
 
     def build_daily_card(self) -> Gtk.Widget:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
@@ -326,7 +328,7 @@ class Window(Adw.ApplicationWindow):
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
                         margin_start=12, margin_end=12, margin_top=32, margin_bottom=12)
         title = Gtk.Label(label=image.title or image.id, xalign=0, wrap=True, lines=2,
-                          ellipsize=Pango.EllipsizeMode.END, max_width_chars=18)
+                          ellipsize=Pango.EllipsizeMode.END, max_width_chars=40)
         title.add_css_class("on-image")
         title.add_css_class("card-title")
         date = Gtk.Label(label=_short_date(image), xalign=0)
@@ -337,7 +339,10 @@ class Window(Adw.ApplicationWindow):
         scrim.append(inner)
         overlay.add_overlay(scrim)
 
-        button = Gtk.Button(child=overlay, tooltip_text=image.copyright)
+        # Fixed size, centred in its column, so the image keeps its 16:9 shape.
+        # The clamp stops the full-resolution texture from widening the card.
+        clamp = Adw.Clamp(maximum_size=CARD_WIDTH, tightening_threshold=CARD_WIDTH, child=overlay)
+        button = Gtk.Button(child=clamp, tooltip_text=image.copyright, halign=Gtk.Align.CENTER)
         button.add_css_class("flat")
         button.add_css_class("card-button")
         button.connect("clicked", lambda b: self.ask_target(b, image))
@@ -347,7 +352,7 @@ class Window(Adw.ApplicationWindow):
                 picture.set_paintable(texture)
                 reveal.set_reveal_child(True)
 
-        self.textures.load(image.url_for("480x800"), CARD_WIDTH * 2, CARD_HEIGHT * 2, show)
+        self.textures.load(image.url_for(CARD_IMAGE), CARD_WIDTH * 2, CARD_HEIGHT * 2, show)
         return button
 
     # -- gallery ---------------------------------------------------------------
@@ -382,10 +387,10 @@ class Window(Adw.ApplicationWindow):
             self.load_more()
 
     def fill_window(self) -> bool:
-        """Keeps loading until the gallery can scroll, since a short page never
-        reaches the bottom edge to trigger the next one."""
+        """Keeps loading while the end of the gallery is on screen (or nearly), since a
+        short page never reaches the bottom edge to trigger the next one."""
         adj = self.scroller.get_vadjustment()
-        if adj.get_upper() <= adj.get_page_size() + 1:
+        if adj.get_value() + adj.get_page_size() >= adj.get_upper() - CARD_HEIGHT:
             self.load_more()
         return False
 
@@ -409,7 +414,7 @@ class Window(Adw.ApplicationWindow):
         self.images += new
         # Start downloading the thumbnails now, before their cards scroll into view.
         for image in new:
-            self.disk.prefetch(image.url_for("480x800"))
+            self.disk.prefetch(image.url_for(CARD_IMAGE))
         if first_page:
             self.show_hero(new[0])
             new = new[1:]  # today's image is the hero; the grid starts from yesterday

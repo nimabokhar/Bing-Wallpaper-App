@@ -32,11 +32,13 @@ overrides:
       - python3 (>= 3.8)
       - python3-gi
       - gir1.2-gtk-4.0
+      - gir1.2-adw-1
   rpm:
     depends:
       - python3 >= 3.8
       - python3-gobject
       - gtk4
+      - libadwaita
       # Ships the cairo typelib that GTK's introspection data needs.
       - gobject-introspection
   archlinux:
@@ -44,6 +46,7 @@ overrides:
       - python
       - python-gobject
       - gtk4
+      - libadwaita
 
 archlinux:
   packager: Nima Bokhar <nimabokhar@users.noreply.github.com>

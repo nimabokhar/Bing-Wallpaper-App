@@ -4,10 +4,11 @@ Sets your desktop wallpaper and lock screen to the [Bing image of the day](https
 
 ## Features
 
-- **Latest images** shows the Bing images of the day, newest first. Scroll down to load older ones, back as far as Bing keeps them (about two weeks). Click one to set it on the desktop, the lock screen, or both.
-- **Set today's image now** applies the newest image to the desktop and lock screen immediately.
+- **Today's image** fills the top of the window. **Set as wallpaper** puts it on the desktop and lock screen right away, or click the image to choose desktop, lock screen or both.
+- **Recent images** shows the earlier Bing images as large previews. Scroll down to load older ones, back as far as Bing keeps them (about two weeks). Click one to set it on the desktop, the lock screen, or both.
 - **Update daily** (on by default) checks every 4 hours with a systemd user timer and switches the wallpaper as soon as Bing publishes a new image. It also checks at login. If you pick an older image by hand, it stays until the next new Bing image comes out.
 - **Schedule** picks when the daily change happens: as soon as Bing publishes a new image (the default), or every day at a time you choose, such as 07:00. If the computer is off at that time, it changes at the next login or startup.
+- **Settings** (the gear button) holds the region, image size and theme (System, Light or Dark), and shows the version.
 - **Bing region** picks which country's image you get. The default follows your system language (falling back to United States).
 - **Image size** picks the resolution to download: 4K UHD (3840×2160, the default, sharp on 4K and multi-monitor setups), 1920×1200, Full HD, 1366×768, 1280×720, 1024×768 or portrait 1080×1920. If Bing doesn't have an image in that size, Full HD is used.
 - Everything also works from the terminal: `bing-wallpaper --help`.
@@ -83,11 +84,11 @@ The daily schedule is the `bing-wallpaper.timer` systemd user unit: `systemctl -
 
 - Settings: `~/.config/bing-wallpaper/config.json`
 - Downloaded wallpapers (the last 12 are kept): `~/.local/share/bing-wallpaper/images/`
-- Gallery thumbnails: `~/.cache/bing-wallpaper/`
+- Gallery previews: `~/.cache/bing-wallpaper/images/` (unused ones are deleted after 30 days)
 
 ## Build and test
 
-The app is plain Python 3 (standard library only); the window uses GTK 4 through PyGObject.
+The app is plain Python 3 (standard library only); the window uses GTK 4 and libadwaita through PyGObject.
 
 ```sh
 cd linux

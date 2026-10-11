@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Install GTK 4 for the window test
-        run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gtk-4.0 xvfb
+        run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 xvfb
       - name: Unit tests
         run: /usr/bin/python3 -m unittest discover -s tests -v
       - name: Window smoke test

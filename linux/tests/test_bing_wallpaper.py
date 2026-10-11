@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import datetime  # noqa: E402
 
-from bing_wallpaper import bing, cli, core, desktop, schedule, settings  # noqa: E402
+from bing_wallpaper import bing, cli, core, desktop, imagecache, schedule, settings  # noqa: E402
 
 ARCHIVE = {
     "images": [
@@ -340,6 +340,46 @@ class ScheduleTest(UpdateTest):
             self.assertIsNone(settings.Settings().get("daily_time"))
             with mock.patch("sys.stderr"):
                 self.assertEqual(cli.main(["daily", "at", "25:00"]), 2)
+
+
+class DiskCacheTest(TempHome):
+    JPEG = b"\xff\xd8\xff" + b"0" * 100
+
+    def test_downloads_once_and_shares_in_flight_requests(self):
+        import threading
+
+        calls = []
+        release = threading.Event()
+
+        def fetch(url):
+            calls.append(url)
+            release.wait(5)
+            return self.JPEG
+
+        cache = imagecache.DiskCache(fetch=fetch)
+        first, second = cache.get("http://x/a.jpg"), cache.get("http://x/a.jpg")
+        self.assertIs(first, second)
+        release.set()
+        path = first.result(5)
+        self.assertEqual(path.read_bytes(), self.JPEG)
+        # Later requests come straight from disk.
+        self.assertEqual(cache.get("http://x/a.jpg").result(5), path)
+        self.assertEqual(calls, ["http://x/a.jpg"])
+
+    def test_rejects_non_images(self):
+        cache = imagecache.DiskCache(fetch=lambda url: b"<html>")
+        with self.assertRaises(OSError):
+            cache.get("http://x/b.jpg").result(5)
+        self.assertIsNone(cache.cached("http://x/b.jpg"))
+
+    def test_prune_deletes_unused_files(self):
+        cache = imagecache.DiskCache(fetch=lambda url: self.JPEG)
+        old = cache.get("http://x/old.jpg").result(5)
+        new = cache.get("http://x/new.jpg").result(5)
+        os.utime(old, (0, 0))
+        self.assertEqual(cache.prune(max_age_days=30), 1)
+        self.assertFalse(old.exists())
+        self.assertTrue(new.exists())
 
 
 if __name__ == "__main__":

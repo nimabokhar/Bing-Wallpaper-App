@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import os
+import time
 from pathlib import Path
 from typing import Callable, List, Optional
 
@@ -37,21 +38,6 @@ def download(
     tmp = path.with_suffix(".part")
     tmp.write_bytes(data)
     os.replace(tmp, path)
-    return path
-
-
-def thumbnail(image: bing.BingImage) -> Optional[Path]:
-    path = settings.cache_dir() / "thumbs" / image_path(image).name
-    if path.exists():
-        return path
-    try:
-        data = bing.http_get(image.thumbnail_url)
-    except OSError:
-        return None
-    if not bing.looks_like_jpeg(data):
-        return None
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
     return path
 
 
@@ -116,7 +102,8 @@ def apply(
         _link("wallpaper.jpg", path)
     if target in (desktop.LOCK, desktop.BOTH):
         _link("lock.jpg", path)
-    state.update(last_seen=newest_id or image.id, last_applied=image.id, last_title=image.title)
+    state.update(last_seen=newest_id or image.id, last_applied=image.id, last_title=image.title,
+                 last_applied_at=time.time())
     _prune()
     return result
 
