@@ -1,8 +1,44 @@
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <shape android:shape="oval">
-            <solid android:color="@color/launcher_background" />
-        </shape>
-    </item>
-    <item android:drawable="@drawable/ic_launcher_foreground" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Pre-Android 8 icon (no adaptive icons there). Same art as the adaptive icon, zoomed to its visible area and clipped to a circle. -->
+    <group
+        android:scaleX="1.5"
+        android:scaleY="1.5"
+        android:translateX="-27"
+        android:translateY="-27">
+        <clip-path android:pathData="M54,54m-36,0a36,36 0,1 1,72 0a36,36 0,1 1,-72 0" />
+        <path android:pathData="M0,0h108v108h-108z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="0"
+                    android:startY="0"
+                    android:endX="0"
+                    android:endY="108">
+                    <item android:offset="0" android:color="#FF1A2A6C" />
+                    <item android:offset="0.25" android:color="#FF2E6FB0" />
+                    <item android:offset="0.45" android:color="#FFF0855A" />
+                    <item android:offset="0.6" android:color="#FFFFC970" />
+                    <item android:offset="1" android:color="#FFFFC970" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:fillAlpha="0.3"
+            android:fillColor="#FFFFF3C4"
+            android:pathData="M54,60m-21,0a21,21 0,1 1,42 0a21,21 0,1 1,-42 0" />
+        <path
+            android:fillColor="#FFFFE08A"
+            android:pathData="M54,60m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0" />
+        <path
+            android:fillColor="#FF3D5A99"
+            android:pathData="M0,70 L18,58 L30,64 L44,52 L58,66 L72,54 L90,64 L108,56 V108 H0 Z" />
+        <path
+            android:fillColor="#FF1B2E4F"
+            android:pathData="M0,82 L20,70 L38,80 L60,66 L82,78 L96,72 L108,78 V108 H0 Z" />
+    </group>
+</vector>

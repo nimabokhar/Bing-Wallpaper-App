@@ -3,11 +3,18 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Simple landscape: sun over mountains. -->
+    <!-- Sun rising behind mountains. Mirrors icon/icon.svg. -->
     <path
-        android:fillColor="#FFFFD54F"
-        android:pathData="M66,42m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+        android:fillAlpha="0.3"
+        android:fillColor="#FFFFF3C4"
+        android:pathData="M54,60m-21,0a21,21 0,1 1,42 0a21,21 0,1 1,-42 0" />
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M30,74 L46,50 L56,64 L63,55 L78,74 Z" />
+        android:fillColor="#FFFFE08A"
+        android:pathData="M54,60m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0" />
+    <path
+        android:fillColor="#FF3D5A99"
+        android:pathData="M0,70 L18,58 L30,64 L44,52 L58,66 L72,54 L90,64 L108,56 V108 H0 Z" />
+    <path
+        android:fillColor="#FF1B2E4F"
+        android:pathData="M0,82 L20,70 L38,80 L60,66 L82,78 L96,72 L108,78 V108 H0 Z" />
 </vector>
