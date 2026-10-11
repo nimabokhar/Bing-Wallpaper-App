@@ -2,6 +2,7 @@ package com.nimabokhar.bingwallpaper
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -53,14 +54,17 @@ object BingApi {
         return MARKETS.firstOrNull { it.first.equals(tag, ignoreCase = true) }?.first ?: DEFAULT_MARKET
     }
 
-    /** Bing's archive only goes back this many days. */
+    /** Bing returns at most this many images per request. */
     const val MAX_IMAGES = 8
+
+    /** Highest start offset Bing's feed accepts; with [MAX_IMAGES] it reaches back about 15 days. */
+    const val MAX_OFFSET = 7
 
     fun fetchImageOfTheDay(market: String): BingImage = fetchLatest(market, 1).first()
 
-    /** The latest images, newest first. */
-    fun fetchLatest(market: String, count: Int = MAX_IMAGES): List<BingImage> {
-        val json = JSONObject(httpGet("$BASE/HPImageArchive.aspx?format=js&idx=0&n=$count&mkt=$market").decodeToString())
+    /** Images from Bing's own feed, newest first, starting [offset] days back. */
+    fun fetchLatest(market: String, count: Int = MAX_IMAGES, offset: Int = 0): List<BingImage> {
+        val json = JSONObject(httpGet("$BASE/HPImageArchive.aspx?format=js&idx=$offset&n=$count&mkt=$market").decodeToString())
         val images = json.getJSONArray("images")
         return (0 until images.length()).map { i ->
             val image = images.getJSONObject(i)
@@ -78,10 +82,67 @@ object BingApi {
         }
     }
 
+    // Older images come from the community-run Bing Wallpaper Archive
+    // (github.com/npanuhin/Bing-Wallpaper-Archive), which keeps every image of the
+    // day per market. Australia and New Zealand aren't archived separately, so they
+    // use its "rest of the world" feed.
+    private const val ARCHIVE_BASE = "https://bing.npanuhin.me"
+    private val ARCHIVE_MARKETS = mapOf(
+        "en-US" to "US-en", "en-GB" to "GB-en", "en-CA" to "CA-en", "fr-CA" to "CA-fr",
+        "en-IN" to "IN-en", "de-DE" to "DE-de", "fr-FR" to "FR-fr", "es-ES" to "ES-es",
+        "it-IT" to "IT-it", "pt-BR" to "BR-pt", "ja-JP" to "JP-ja", "zh-CN" to "CN-zh",
+    )
+    private const val ARCHIVE_FALLBACK = "ROW-en"
+    private val BING_SIZE_SUFFIX = Regex("_(UHD|\\d+x\\d+)\\.jpg")
+
+    /**
+     * The archived images for one month, newest first. Returns null when the
+     * archive has no file for that month (before it starts, or not published yet).
+     */
+    fun fetchArchiveMonth(market: String, year: Int, month: Int): List<BingImage>? {
+        val code = ARCHIVE_MARKETS[market] ?: ARCHIVE_FALLBACK
+        val url = "$ARCHIVE_BASE/$code.$year.${"%02d".format(Locale.US, month)}.json"
+        val body = try {
+            httpGet(url).decodeToString().trim()
+        } catch (e: HttpStatusException) {
+            if (e.code == 404) return null else throw e
+        }
+        val entries = if (body.startsWith("[")) JSONArray(body) else firstArray(JSONObject(body)) ?: JSONArray()
+        return (0 until entries.length()).mapNotNull { i ->
+            val entry = entries.optJSONObject(i) ?: return@mapNotNull null
+            val date = entry.optString("date").takeIf { it.length == 10 } ?: return@mapNotNull null
+            val archiveUrl = entry.optString("url").takeIf { it.startsWith("http") } ?: return@mapNotNull null
+            val bingUrl = entry.optString("bing_url").takeIf { it.startsWith("http") && BING_SIZE_SUFFIX.containsMatchIn(it) }
+            BingImage(
+                id = "archive-$code-$date",
+                title = entry.optString("title").takeUnless { entry.isNull("title") }.orEmpty(),
+                copyright = entry.optString("copyright").takeUnless { entry.isNull("copyright") }.orEmpty(),
+                startDate = date.replace("-", ""),
+                uhdUrl = archiveUrl,
+                portraitUrl = bingUrl?.let { BING_SIZE_SUFFIX.replace(it, "_1080x1920.jpg") } ?: archiveUrl,
+                fallbackUrl = archiveUrl,
+                thumbnailUrl = bingUrl?.let { BING_SIZE_SUFFIX.replace(it, "_480x800.jpg") } ?: archiveUrl,
+            )
+        }.sortedByDescending { it.startDate }
+    }
+
+    private fun firstArray(json: JSONObject): JSONArray? =
+        json.keys().asSequence().mapNotNull { json.optJSONArray(it) }.firstOrNull()
+
+    /** Downloads the gallery thumbnail, scaled down if the source is full size. */
     fun downloadThumbnail(image: BingImage): Bitmap? = runCatching {
-        val bytes = httpGet(image.thumbnailUrl)
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        val bytes = runCatching { httpGet(image.thumbnailUrl) }.getOrNull()
+            ?: httpGet(image.fallbackUrl)
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) >= THUMBNAIL_WIDTH && bounds.outHeight / (sample * 2) >= THUMBNAIL_WIDTH) {
+            sample *= 2
+        }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
     }.getOrNull()
+
+    private const val THUMBNAIL_WIDTH = 480
 
     fun downloadBitmap(image: BingImage): Bitmap {
         for (url in listOf(image.uhdUrl, image.portraitUrl, image.fallbackUrl)) {
@@ -98,7 +159,7 @@ object BingApi {
             conn.readTimeout = 30_000
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) BingWallpaper")
             if (conn.responseCode !in 200..299) {
-                throw IOException("HTTP ${conn.responseCode} for $url")
+                throw HttpStatusException(conn.responseCode, url)
             }
             return conn.inputStream.use { it.readBytes() }
         } finally {
@@ -106,3 +167,5 @@ object BingApi {
         }
     }
 }
+
+class HttpStatusException(val code: Int, url: String) : IOException("HTTP $code for $url")

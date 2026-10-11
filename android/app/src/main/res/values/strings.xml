@@ -12,6 +12,9 @@
     <string name="latest_images">Latest images</string>
     <string name="gallery_hint">Tap an image to set it as your wallpaper.</string>
     <string name="loading">Loading images…</string>
+    <string name="loading_more">Loading older images…</string>
+    <string name="load_more_failed">Couldn\'t load older images. Tap to try again.</string>
+    <string name="gallery_end">That\'s every image in the archive.</string>
     <string name="load_failed">Couldn\'t load images. Check your connection.</string>
     <string name="set_where">Set \"%1$s\" on</string>
     <string name="target_both">Home and lock screen</string>

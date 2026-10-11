@@ -10,13 +10,14 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -28,8 +29,14 @@ import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var gallery: LinearLayout
+    private lateinit var header: View
+    private lateinit var gallery: RecyclerView
+    private lateinit var galleryLayout: GridLayoutManager
+    private lateinit var adapter: GalleryAdapter
     private lateinit var galleryMessage: TextView
+    private var pager: GalleryPager? = null
+    private var loadingMore = false
+    private var loadFailed = false
     private lateinit var setNow: Button
     private lateinit var status: TextView
     private var galleryJob: Job? = null
@@ -56,15 +63,36 @@ class MainActivity : ComponentActivity() {
         ScreenShapes.recordCurrent(this)
 
         gallery = findViewById(R.id.gallery)
-        galleryMessage = findViewById(R.id.galleryMessage)
-        setNow = findViewById(R.id.setNow)
-        status = findViewById(R.id.status)
-        findViewById<TextView>(R.id.version).text = getString(R.string.version, BuildConfig.VERSION_NAME)
+        header = layoutInflater.inflate(R.layout.gallery_header, gallery, false)
+        adapter = GalleryAdapter(header, lifecycleScope, ::formatDate, ::chooseTarget) {
+            if (loadFailed) {
+                loadFailed = false
+                loadMore()
+            }
+        }
+        // More columns on wide windows, such as an unfolded foldable or a tablet.
+        val columns = (resources.configuration.screenWidthDp / 180).coerceIn(2, 5)
+        galleryLayout = GridLayoutManager(this, columns).apply { spanSizeLookup = adapter.spanSizeLookup(columns) }
+        gallery.layoutManager = galleryLayout
+        gallery.adapter = adapter
+        // The header is a single shared view, so it must never be duplicated for a change animation.
+        (gallery.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
+        gallery.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (dy > 0) loadFailed = false
+                maybeLoadMore()
+            }
+        })
 
-        val dailySwitch = findViewById<Switch>(R.id.dailySwitch)
+        galleryMessage = header.findViewById(R.id.galleryMessage)
+        setNow = header.findViewById(R.id.setNow)
+        status = header.findViewById(R.id.status)
+        header.findViewById<TextView>(R.id.version).text = getString(R.string.version, BuildConfig.VERSION_NAME)
+
+        val dailySwitch = header.findViewById<Switch>(R.id.dailySwitch)
         dailySwitch.isChecked = Settings.isDailyEnabled(this)
-        val scheduleLabel = findViewById<TextView>(R.id.scheduleLabel)
-        val scheduleButton = findViewById<Button>(R.id.scheduleButton)
+        val scheduleLabel = header.findViewById<TextView>(R.id.scheduleLabel)
+        val scheduleButton = header.findViewById<Button>(R.id.scheduleButton)
         fun showSchedule() {
             val (hour, minute) = Settings.scheduleTime(this)
             scheduleButton.text = formatTime(hour, minute)
@@ -97,7 +125,7 @@ class MainActivity : ComponentActivity() {
         val deviceName = BingApi.MARKETS.first { it.first == deviceMarket }.second
         // Index 0 follows the device; the rest map to BingApi.MARKETS in order.
         val labels = listOf(getString(R.string.region_automatic, deviceName)) + BingApi.MARKETS.map { it.second }
-        val spinner = findViewById<Spinner>(R.id.regionSpinner)
+        val spinner = header.findViewById<Spinner>(R.id.regionSpinner)
         spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
 
         val chosen = Settings.chosenMarket(this)
@@ -118,7 +146,7 @@ class MainActivity : ComponentActivity() {
 
     private fun setUpThemePicker() {
         val labels = listOf(R.string.theme_system, R.string.theme_light, R.string.theme_dark).map(::getString)
-        val spinner = findViewById<Spinner>(R.id.themeSpinner)
+        val spinner = header.findViewById<Spinner>(R.id.themeSpinner)
         spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
         spinner.setSelection(Settings.themeMode(this).ordinal, false)
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -135,46 +163,47 @@ class MainActivity : ComponentActivity() {
 
     private fun loadGallery() {
         galleryJob?.cancel()
-        gallery.removeAllViews()
+        adapter.setImages(emptyList())
+        adapter.footerText = ""
+        pager = GalleryPager(Settings.market(applicationContext))
+        loadingMore = false
+        loadFailed = false
         galleryMessage.setText(R.string.loading)
+        loadMore()
+    }
+
+    /** Loads the next, older page when the user nears the end of the gallery. */
+    private fun maybeLoadMore() {
+        val lastVisible = galleryLayout.findLastVisibleItemPosition()
+        if (lastVisible >= adapter.itemCount - 1 - galleryLayout.spanCount * 3) loadMore()
+    }
+
+    private fun loadMore() {
+        val pager = pager ?: return
+        if (loadingMore || pager.exhausted || loadFailed) return
+        loadingMore = true
+        val firstPage = adapter.imageCount == 0
+        if (!firstPage) adapter.footerText = getString(R.string.loading_more)
         galleryJob = lifecycleScope.launch {
-            val images = try {
-                withContext(Dispatchers.IO) { BingApi.fetchLatest(Settings.market(applicationContext)) }
+            try {
+                val images = withContext(Dispatchers.IO) { pager.nextPage() }
+                if (firstPage) galleryMessage.setText(R.string.gallery_hint)
+                adapter.addImages(images)
+                adapter.footerText = if (pager.exhausted) getString(R.string.gallery_end) else ""
             } catch (e: Exception) {
-                galleryMessage.setText(R.string.load_failed)
-                return@launch
-            }
-            galleryMessage.setText(R.string.gallery_hint)
-
-            // More columns on wide windows, such as an unfolded foldable or a tablet.
-            val columns = (resources.configuration.screenWidthDp / 180).coerceIn(2, 5)
-            val thumbs = images.chunked(columns).flatMap { group ->
-                val row = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL }
-                gallery.addView(row)
-                val views = group.map { image -> addItem(row, image) }
-                // Keep a short last row's images the same width as the others.
-                repeat(columns - group.size) {
-                    row.addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 0, 1f))
-                }
-                views
-            }
-
-            for ((image, thumb) in images.zip(thumbs)) {
-                launch {
-                    withContext(Dispatchers.IO) { BingApi.downloadThumbnail(image) }?.let(thumb::setImageBitmap)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (firstPage) galleryMessage.setText(R.string.load_failed)
+                adapter.footerText = getString(R.string.load_more_failed)
+                // Wait for the user to tap the footer or scroll before retrying.
+                loadFailed = true
+            } finally {
+                // A region change may have replaced the pager while this page loaded.
+                if (this@MainActivity.pager === pager) {
+                    loadingMore = false
+                    gallery.post { maybeLoadMore() }
                 }
             }
         }
-    }
-
-    /** Adds a gallery item for [image] to [row] and returns its thumbnail view. */
-    private fun addItem(row: LinearLayout, image: BingImage): ImageView {
-        val item = layoutInflater.inflate(R.layout.item_image, row, false)
-        item.findViewById<TextView>(R.id.itemTitle).text = image.title.ifBlank { image.copyright }
-        item.findViewById<TextView>(R.id.itemDate).text = formatDate(image.startDate)
-        item.setOnClickListener { chooseTarget(image) }
-        row.addView(item)
-        return item.findViewById(R.id.thumb)
     }
 
     private fun chooseTarget(image: BingImage) {
