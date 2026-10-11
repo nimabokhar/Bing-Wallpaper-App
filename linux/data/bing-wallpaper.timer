@@ -1,0 +1,13 @@
+[Unit]
+Description=Check for a new Bing image of the day every few hours
+
+[Timer]
+# Bing publishes a new image once a day; checking every few hours means the
+# wallpaper changes soon after, and only when the image is actually new.
+OnStartupSec=2min
+OnCalendar=*-*-* 00/4:05:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

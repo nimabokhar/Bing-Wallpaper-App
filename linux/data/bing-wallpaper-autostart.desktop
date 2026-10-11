@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Bing Wallpaper (daily update)
+Comment=Applies a new Bing image at login and keeps daily updates switched on
+Exec=bing-wallpaper update --login
+Icon=io.github.nimabokhar.BingWallpaper
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-Delay=10
+X-KDE-autostart-after=panel

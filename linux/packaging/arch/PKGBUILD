@@ -1,0 +1,33 @@
+# Maintainer: Nima Bokhar <nimabokhar@users.noreply.github.com>
+# Builds from the latest code on GitHub. To install: makepkg -si
+pkgname=bing-wallpaper-git
+pkgver=0.1.0alpha.1
+pkgrel=1
+pkgdesc="Sets your desktop and lock screen wallpaper to the Bing image of the day"
+arch=('any')
+url="https://github.com/nimabokhar/Bing-Wallpaper-Android-App"
+license=('MIT')
+depends=('python' 'python-gobject' 'gtk4')
+makedepends=('git' 'make')
+provides=('bing-wallpaper')
+conflicts=('bing-wallpaper')
+backup=('etc/xdg/autostart/bing-wallpaper-autostart.desktop')
+source=("$pkgname::git+https://github.com/nimabokhar/Bing-Wallpaper-Android-App.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$pkgname"
+  local version
+  version=$(make -s -C linux version | tr -d -)
+  printf "%s.r%s.g%s" "$version" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+check() {
+  cd "$pkgname/linux"
+  python -m unittest discover -s tests
+}
+
+package() {
+  cd "$pkgname/linux"
+  make install DESTDIR="$pkgdir" PREFIX=/usr
+}

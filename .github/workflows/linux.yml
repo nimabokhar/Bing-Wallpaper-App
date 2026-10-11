@@ -1,0 +1,137 @@
+name: Linux packages
+
+on:
+  push:
+    branches: [main]
+    paths: ["linux/**", "icon/**", "VERSION", ".github/workflows/linux.yml", ".github/scripts/release.sh", "LICENSE"]
+  pull_request:
+    paths: ["linux/**", "icon/**", "VERSION", ".github/workflows/linux.yml", ".github/scripts/release.sh", "LICENSE"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: linux
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GTK 4 for the window test
+        run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gtk-4.0 xvfb
+      - name: Unit tests
+        run: /usr/bin/python3 -m unittest discover -s tests -v
+      - name: Window smoke test
+        working-directory: linux/tests
+        run: xvfb-run -a /usr/bin/python3 gui_smoke.py
+
+  package:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      - name: Install nfpm
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.1
+      - name: Build .deb, .rpm and Arch packages
+        run: |
+          make packages
+          cp dist/*.deb dist/bing-wallpaper.deb
+          cp dist/*.rpm dist/bing-wallpaper.rpm
+          cp dist/*.pkg.tar.zst dist/bing-wallpaper.pkg.tar.zst
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bing-wallpaper-linux
+          path: linux/dist/
+
+  install:
+    needs: package
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: debian
+            image: debian:stable
+            install: apt-get update && apt-get install -y ./bing-wallpaper.deb
+          - distro: fedora
+            image: fedora:latest
+            install: dnf install -y ./bing-wallpaper.rpm
+          - distro: arch
+            image: archlinux:latest
+            install: pacman -Syu --noconfirm && pacman -U --noconfirm ./bing-wallpaper.pkg.tar.zst
+    container: ${{ matrix.image }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: bing-wallpaper-linux
+      - name: Install on ${{ matrix.distro }}
+        run: ${{ matrix.install }}
+      - name: Check the installed app
+        run: |
+          bing-wallpaper --version
+          bing-wallpaper --help
+          XDG_CURRENT_DESKTOP=GNOME bing-wallpaper status
+          bing-wallpaper region --list
+          # The window's GTK 4 dependencies came with the package.
+          python3 -c "import sys; sys.path.insert(0, '/usr/share/bing-wallpaper'); from bing_wallpaper import gui"
+          test -f /usr/lib/systemd/user/bing-wallpaper.timer
+          test -f /etc/xdg/autostart/bing-wallpaper-autostart.desktop
+
+  pkgbuild:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the AUR PKGBUILD
+        run: |
+          pacman -Syu --noconfirm base-devel git
+          useradd -m builder
+          chown -R builder linux/packaging/arch
+          cd linux/packaging/arch
+          su builder -c "makepkg --printsrcinfo" > .SRCINFO
+          cat .SRCINFO
+
+  publish:
+    needs: install
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: bing-wallpaper-linux
+          path: dist
+      - name: Publish to the "latest" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Shared with the other platforms' workflows; "|| true" covers one of them creating it first.
+          gh release view latest >/dev/null 2>&1 || \
+            gh release create latest --title "Latest build" --notes "Built automatically from main." || true
+          gh release upload latest dist/bing-wallpaper.deb dist/bing-wallpaper.rpm dist/bing-wallpaper.pkg.tar.zst --clobber
+      - name: Attach to the versioned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The release for the version in VERSION (e.g. v0.1.0-alpha.1) gets the
+          # versioned file names; it is left alone once released from another commit.
+          if [ -x .github/scripts/release.sh ]; then
+            .github/scripts/release.sh check
+            .github/scripts/release.sh publish $(ls dist/bing-wallpaper[_-]*)
+          fi
