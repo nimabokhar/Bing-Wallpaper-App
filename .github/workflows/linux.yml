@@ -65,7 +65,7 @@ jobs:
             install: apt-get update && apt-get install -y ./bing-wallpaper.deb
           - distro: fedora
             image: fedora:latest
-            install: dnf install -y ./bing-wallpaper.rpm && (dnf -q provides '*/cairo-1.0.typelib' || true)
+            install: dnf install -y ./bing-wallpaper.rpm
           - distro: arch
             image: archlinux:latest
             install: pacman -Syu --noconfirm && pacman -U --noconfirm ./bing-wallpaper.pkg.tar.zst

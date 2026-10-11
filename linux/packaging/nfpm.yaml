@@ -28,16 +28,15 @@ overrides:
   deb:
     depends:
       - python3 (>= 3.8)
-    recommends:
       - python3-gi
       - gir1.2-gtk-4.0
   rpm:
     depends:
       - python3 >= 3.8
-    recommends:
       - python3-gobject
-      - typelib(Gtk) = 4.0
-      - typelib(cairo)
+      - gtk4
+      # Ships the cairo typelib that GTK's introspection data needs.
+      - gobject-introspection
   archlinux:
     depends:
       - python
