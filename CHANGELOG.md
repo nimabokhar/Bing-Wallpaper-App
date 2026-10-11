@@ -6,6 +6,17 @@ While the apps are in alpha, expect rough edges and changes between builds.
 
 ## [Unreleased]
 
+## [0.2.0-alpha.2] - 2026-10-11
+
+### Android
+
+- Fixed the app crashing as soon as it opened (seen on a Galaxy Z Fold 5, folded and unfolded). The gallery's header was created before the list was ready to hold it.
+- CI now opens the app on an emulator, on a phone-sized and a Z Fold-sized screen, so a crash on start-up is caught before a release.
+
+### Linux
+
+- New libadwaita design matching Android: today's image at the top, a daily-change group, wide image cards, and a Preferences window for region, image size and theme.
+
 ## [0.2.0-alpha.1] - 2026-10-11
 
 A new look for the Android app, a scrolling gallery and resolution choice on Android, and the first Linux version.
