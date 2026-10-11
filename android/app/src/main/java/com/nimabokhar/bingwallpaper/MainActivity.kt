@@ -116,6 +116,7 @@ class MainActivity : ComponentActivity() {
 
         setUpRegionPicker()
         setUpThemePicker()
+        setUpResolutionPicker()
         showLastApplied()
         loadGallery()
     }
@@ -138,6 +139,23 @@ class MainActivity : ComponentActivity() {
                 if (market == Settings.chosenMarket(this@MainActivity)) return
                 Settings.setChosenMarket(this@MainActivity, market)
                 loadGallery()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+    }
+
+    private fun setUpResolutionPicker() {
+        // Same order as ImageResolution.
+        val labels = listOf(
+            R.string.resolution_uhd, R.string.resolution_full_hd, R.string.resolution_hd, R.string.resolution_portrait,
+        ).map(::getString)
+        val spinner = header.findViewById<Spinner>(R.id.resolutionSpinner)
+        spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
+        spinner.setSelection(Settings.resolution(this).ordinal, false)
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                Settings.setResolution(this@MainActivity, ImageResolution.entries[position])
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit

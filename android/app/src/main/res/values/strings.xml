@@ -5,6 +5,11 @@
     <string name="schedule_label">Change at</string>
     <string name="region">Bing region</string>
     <string name="region_automatic">Automatic (%1$s)</string>
+    <string name="resolution">Image resolution</string>
+    <string name="resolution_uhd">4K / UHD (sharpest, largest download)</string>
+    <string name="resolution_full_hd">1920 × 1080</string>
+    <string name="resolution_hd">1366 × 768 (smallest download)</string>
+    <string name="resolution_portrait">1080 × 1920 portrait</string>
     <string name="theme">Theme</string>
     <string name="theme_system">System default</string>
     <string name="theme_light">Light</string>

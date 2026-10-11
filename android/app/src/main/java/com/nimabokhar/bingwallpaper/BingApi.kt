@@ -15,15 +15,21 @@ data class BingImage(
     val copyright: String,
     /** Day the image was Bing's image of the day, as yyyyMMdd. */
     val startDate: String,
-    /** Full-resolution 3840x2160 image, so it can be cropped for any screen shape. */
-    val uhdUrl: String,
-    /** Portrait image sized for phones, used if UHD fails. */
-    val portraitUrl: String,
-    /** Landscape image Bing shows on its home page, used if portrait fails. */
+    /** Bing image URL without the size suffix; see [ImageResolution]. */
+    val urlBase: String,
+    /** Landscape image Bing shows on its home page, used if the chosen size fails. */
     val fallbackUrl: String,
     /** Small portrait version for the gallery. */
     val thumbnailUrl: String,
 )
+
+/** Image sizes Bing publishes for each image of the day. */
+enum class ImageResolution(val suffix: String) {
+    UHD("_UHD.jpg"),
+    FULL_HD("_1920x1080.jpg"),
+    HD("_1366x768.jpg"),
+    PORTRAIT("_1080x1920.jpg"),
+}
 
 object BingApi {
     private const val BASE = "https://www.bing.com"
@@ -73,8 +79,7 @@ object BingApi {
                 title = image.optString("title"),
                 copyright = image.optString("copyright"),
                 startDate = image.optString("startdate"),
-                uhdUrl = "$BASE${urlBase}_UHD.jpg",
-                portraitUrl = "$BASE${urlBase}_1080x1920.jpg",
+                urlBase = BASE + urlBase,
                 fallbackUrl = BASE + image.getString("url"),
                 thumbnailUrl = "$BASE${urlBase}_480x800.jpg",
             )
@@ -96,8 +101,10 @@ object BingApi {
 
     private const val THUMBNAIL_WIDTH = 480
 
-    fun downloadBitmap(image: BingImage): Bitmap {
-        for (url in listOf(image.uhdUrl, image.portraitUrl, image.fallbackUrl)) {
+    /** Downloads [image] at [resolution], falling back to other sizes if Bing doesn't have it. */
+    fun downloadBitmap(image: BingImage, resolution: ImageResolution): Bitmap {
+        val sizes = listOf(resolution, ImageResolution.UHD, ImageResolution.PORTRAIT).distinct()
+        for (url in sizes.map { image.urlBase + it.suffix } + image.fallbackUrl) {
             val bytes = runCatching { httpGet(url) }.getOrNull() ?: continue
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.let { return it }
         }
