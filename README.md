@@ -7,7 +7,7 @@ Each platform is a separate app in its own folder, with its own build and its ow
 | Platform | Folder | Status |
 | --- | --- | --- |
 | Android (phone home and lock screen) | [`android/`](android/) | Available: [download the APK](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/tag/latest) |
-| Linux | `linux/` | In progress |
+| Linux (desktop and lock screen; Fedora, Arch, Debian) | [`linux/`](linux/) | Available: [.deb](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.deb), [.rpm](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.rpm), [Arch](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.pkg.tar.zst) |
 | Windows | `windows/` | Planned |
 | macOS | `macos/` | Planned |
 

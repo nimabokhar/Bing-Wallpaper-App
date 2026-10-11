@@ -32,7 +32,7 @@ For any other setup, add a command to `~/.config/bing-wallpaper/config.json`, an
 
 ## Install
 
-Download the package for your distro from the [**linux-latest release**](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/tag/linux-latest). Builds from pull requests are also attached to each run on the Actions tab as the `bing-wallpaper-linux` artifact.
+Download the package for your distro from the [**latest release**](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/tag/latest). Builds from pull requests are also attached to each run on the Actions tab as the `bing-wallpaper-linux` artifact.
 
 **Debian / Ubuntu**
 

@@ -117,11 +117,11 @@ jobs:
         with:
           name: bing-wallpaper-linux
           path: dist
-      - name: Publish to the "linux-latest" release
+      - name: Publish to the "latest" release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view linux-latest >/dev/null 2>&1 || \
-            gh release create linux-latest --title "Latest Linux build" --prerelease \
-              --notes "Built automatically from main. Download bing-wallpaper.deb (Debian/Ubuntu), bing-wallpaper.rpm (Fedora) or bing-wallpaper.pkg.tar.zst (Arch)."
-          gh release upload linux-latest dist/bing-wallpaper.deb dist/bing-wallpaper.rpm dist/bing-wallpaper.pkg.tar.zst --clobber
+          # Shared with the other platforms' workflows; "|| true" covers one of them creating it first.
+          gh release view latest >/dev/null 2>&1 || \
+            gh release create latest --title "Latest build" --notes "Built automatically from main." || true
+          gh release upload latest dist/bing-wallpaper.deb dist/bing-wallpaper.rpm dist/bing-wallpaper.pkg.tar.zst --clobber
