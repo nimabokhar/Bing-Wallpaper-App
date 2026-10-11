@@ -45,7 +45,7 @@ jobs:
           cp dist/*.deb dist/bing-wallpaper.deb
           cp dist/*.rpm dist/bing-wallpaper.rpm
           cp dist/*.pkg.tar.zst dist/bing-wallpaper.pkg.tar.zst
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: bing-wallpaper-linux
           path: linux/dist/
@@ -71,7 +71,7 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: bing-wallpaper-linux
       - name: Install on ${{ matrix.distro }}
@@ -113,7 +113,7 @@ jobs:
         working-directory: .
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: bing-wallpaper-linux
           path: dist

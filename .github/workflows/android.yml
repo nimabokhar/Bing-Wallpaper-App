@@ -71,7 +71,7 @@ jobs:
           ./gradlew --no-daemon assembleRelease
           cp app/build/outputs/apk/release/app-release.apk bing-wallpaper.apk
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: bing-wallpaper-apk
           path: android/bing-wallpaper.apk
