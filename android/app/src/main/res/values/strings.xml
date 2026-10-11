@@ -1,7 +1,8 @@
 <resources>
     <string name="app_name">Bing Wallpaper</string>
     <string name="set_now">Set today\'s image now</string>
-    <string name="daily_updates">Update daily (home and lock screen)</string>
+    <string name="daily_updates">Change automatically every day (home and lock screen)</string>
+    <string name="schedule_label">Change at</string>
     <string name="region">Bing region</string>
     <string name="region_automatic">Automatic (%1$s)</string>
     <string name="theme">Theme</string>

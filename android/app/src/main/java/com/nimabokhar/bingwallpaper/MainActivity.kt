@@ -1,6 +1,7 @@
 package com.nimabokhar.bingwallpaper
 
 import android.app.AlertDialog
+import android.app.TimePickerDialog
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -60,7 +62,26 @@ class MainActivity : ComponentActivity() {
 
         val dailySwitch = findViewById<Switch>(R.id.dailySwitch)
         dailySwitch.isChecked = Settings.isDailyEnabled(this)
-        dailySwitch.setOnCheckedChangeListener { _, checked -> Settings.setDailyEnabled(this, checked) }
+        val scheduleLabel = findViewById<TextView>(R.id.scheduleLabel)
+        val scheduleButton = findViewById<Button>(R.id.scheduleButton)
+        fun showSchedule() {
+            val (hour, minute) = Settings.scheduleTime(this)
+            scheduleButton.text = formatTime(hour, minute)
+            scheduleButton.isEnabled = dailySwitch.isChecked
+            scheduleLabel.isEnabled = dailySwitch.isChecked
+        }
+        scheduleButton.setOnClickListener {
+            val (hour, minute) = Settings.scheduleTime(this)
+            TimePickerDialog(this, { _, h, m ->
+                Settings.setScheduleTime(this, h, m)
+                showSchedule()
+            }, hour, minute, android.text.format.DateFormat.is24HourFormat(this)).show()
+        }
+        dailySwitch.setOnCheckedChangeListener { _, checked ->
+            Settings.setDailyEnabled(this, checked)
+            showSchedule()
+        }
+        showSchedule()
 
         setNow.setOnClickListener { setTodayNow() }
 
@@ -215,4 +236,12 @@ class MainActivity : ComponentActivity() {
         val date = SimpleDateFormat("yyyyMMdd", Locale.US).parse(yyyyMMdd)!!
         DateFormat.getDateInstance(DateFormat.MEDIUM).format(date)
     }.getOrDefault(yyyyMMdd)
+
+    private fun formatTime(hour: Int, minute: Int): String {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+        }
+        return android.text.format.DateFormat.getTimeFormat(this).format(calendar.time)
+    }
 }

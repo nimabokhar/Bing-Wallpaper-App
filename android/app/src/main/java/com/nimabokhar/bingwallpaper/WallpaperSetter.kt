@@ -26,8 +26,11 @@ object WallpaperSetter {
      * Applies the newest Bing image to the home and lock screen. Returns the
      * applied image, or null if it was already handled and [force] is false.
      */
-    fun applyNewest(context: Context, force: Boolean): BingImage? {
-        val image = BingApi.fetchImageOfTheDay(Settings.market(context))
+    fun applyNewest(
+        context: Context,
+        force: Boolean,
+        image: BingImage = BingApi.fetchImageOfTheDay(Settings.market(context)),
+    ): BingImage? {
         if (!force && prefs(context).getString(KEY_SEEN_NEWEST_ID, null) == image.id) return null
         apply(context, image, WallpaperTarget.BOTH)
         markNewestSeen(context, image.id)
