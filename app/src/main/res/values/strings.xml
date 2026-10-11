@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Bing Wallpaper</string>
+    <string name="set_now">Set wallpaper now</string>
+    <string name="daily_updates">Update daily (home and lock screen)</string>
+    <string name="loading">Loading today\'s image…</string>
+    <string name="load_failed">Couldn\'t load today\'s image. Check your connection.</string>
+    <string name="setting">Setting wallpaper…</string>
+    <string name="set_done">Wallpaper set on home and lock screen.</string>
+    <string name="set_failed">Couldn\'t set the wallpaper: %1$s</string>
+    <string name="last_applied">Last applied: %1$s</string>
+    <string name="never_applied">No wallpaper applied yet.</string>
+</resources>

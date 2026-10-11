@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Simple landscape: sun over mountains. -->
+    <path
+        android:fillColor="#FFFFD54F"
+        android:pathData="M66,42m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M30,74 L46,50 L56,64 L63,55 L78,74 Z" />
+</vector>
