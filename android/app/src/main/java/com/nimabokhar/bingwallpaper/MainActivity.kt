@@ -1,23 +1,33 @@
 package com.nimabokhar.bingwallpaper
 
-import android.app.AlertDialog
-import android.app.TimePickerDialog
-import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.Spinner
-import android.widget.Switch
+import android.widget.ImageView
 import android.widget.TextView
-import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -26,157 +36,289 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.roundToInt
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var header: View
     private lateinit var gallery: RecyclerView
     private lateinit var galleryLayout: GridLayoutManager
     private lateinit var adapter: GalleryAdapter
     private lateinit var galleryMessage: TextView
+    private lateinit var statusScrim: View
     private var pager: GalleryPager? = null
+    private var firstPageLoaded = false
     private var loadingMore = false
     private var loadFailed = false
-    private lateinit var setNow: Button
+    private lateinit var setNow: MaterialButton
     private lateinit var status: TextView
+    private lateinit var setProgress: LinearProgressIndicator
     private var galleryJob: Job? = null
     private var settingWallpaper = false
 
-    override fun attachBaseContext(newBase: Context) {
-        super.attachBaseContext(newBase)
-        // Force light or dark resources when the user overrides the system theme.
-        val night = when (Settings.themeMode(newBase)) {
-            ThemeMode.SYSTEM -> return
-            ThemeMode.LIGHT -> Configuration.UI_MODE_NIGHT_NO
-            ThemeMode.DARK -> Configuration.UI_MODE_NIGHT_YES
-        }
-        val uiMode = newBase.resources.configuration.uiMode
-        applyOverrideConfiguration(Configuration().apply {
-            this.uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or night
-        })
-    }
+    private lateinit var hero: View
+    private lateinit var heroImage: ImageView
+    private lateinit var heroProgress: CircularProgressIndicator
+    private lateinit var heroDate: TextView
+    private lateinit var heroTitle: TextView
+    private lateinit var heroCaption: TextView
+    private var heroWidth = 0
+    private var heroHeight = 0
+    private var heroJob: Job? = null
+    private var today: BingImage? = null
+
+    /** Whether the status bar currently sits over the page rather than over the hero image. */
+    private var barsOverPage: Boolean? = null
+    private var openSheet: BottomSheetDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         // Folding or unfolding recreates the activity, so this sees every screen.
         ScreenShapes.recordCurrent(this)
 
         gallery = findViewById(R.id.gallery)
+        statusScrim = findViewById(R.id.statusScrim)
         header = layoutInflater.inflate(R.layout.gallery_header, gallery, false)
-        adapter = GalleryAdapter(header, lifecycleScope, ::formatDate, ::chooseTarget) {
+
+        // More columns on wide windows, such as an unfolded foldable or a tablet.
+        val columns = (resources.configuration.screenWidthDp / 180).coerceIn(2, 5)
+        val spacing = resources.getDimensionPixelSize(R.dimen.grid_spacing)
+        val screenWidth = resources.displayMetrics.widthPixels
+        val thumbWidth = (screenWidth - spacing * (columns + 1)) / columns
+        adapter = GalleryAdapter(header, lifecycleScope, thumbWidth, ::formatDate, ::chooseTarget) {
             if (loadFailed) {
                 loadFailed = false
                 loadMore()
             }
         }
-        // More columns on wide windows, such as an unfolded foldable or a tablet.
-        val columns = (resources.configuration.screenWidthDp / 180).coerceIn(2, 5)
         galleryLayout = GridLayoutManager(this, columns).apply { spanSizeLookup = adapter.spanSizeLookup(columns) }
         gallery.layoutManager = galleryLayout
         gallery.adapter = adapter
+        // The list always fills the screen, so adding images never re-measures it.
+        gallery.setHasFixedSize(true)
+        gallery.addItemDecoration(GridSpacing(spacing))
+        // Keep a couple of rows of cells bound just off screen, ready to scroll back to.
+        gallery.setItemViewCacheSize(columns * 2)
         // The header is a single shared view, so it must never be duplicated for a change animation.
         (gallery.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
         gallery.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (dy > 0) loadFailed = false
                 maybeLoadMore()
+                updateStatusBar()
             }
         })
 
-        galleryMessage = header.findViewById(R.id.galleryMessage)
-        setNow = header.findViewById(R.id.setNow)
-        status = header.findViewById(R.id.status)
-        header.findViewById<TextView>(R.id.version).text = getString(R.string.version, BuildConfig.VERSION_NAME)
+        setUpHero()
+        setUpDailyCard()
+        applyWindowInsets()
+        updateStatusBar()
+        showLastApplied()
+        loadGallery()
+    }
 
-        val dailySwitch = header.findViewById<Switch>(R.id.dailySwitch)
+    override fun onDestroy() {
+        openSheet?.dismiss()
+        super.onDestroy()
+    }
+
+    private fun setUpHero() {
+        hero = header.findViewById(R.id.hero)
+        heroImage = header.findViewById(R.id.heroImage)
+        heroProgress = header.findViewById(R.id.heroProgress)
+        heroDate = header.findViewById(R.id.heroDate)
+        heroTitle = header.findViewById(R.id.heroTitle)
+        heroCaption = header.findViewById(R.id.heroCaption)
+        setNow = header.findViewById(R.id.setNow)
+
+        // Fixed from the window size, so the hero never changes height while loading.
+        val metrics = resources.displayMetrics
+        heroWidth = metrics.widthPixels
+        heroHeight = minOf((metrics.widthPixels * 1.2f).roundToInt(), (metrics.heightPixels * 0.62f).roundToInt())
+        hero.updateLayoutParams { height = heroHeight }
+        roundCorners(hero, resources.getDimension(R.dimen.hero_corner), bottomOnly = true)
+
+        hero.setOnClickListener {
+            val image = today
+            when {
+                image != null -> chooseTarget(image)
+                loadFailed -> loadGallery()
+            }
+        }
+        setNow.setOnClickListener { setTodayNow() }
+        header.findViewById<View>(R.id.settingsButton).setOnClickListener { showSettings() }
+    }
+
+    private fun showHero(image: BingImage?) {
+        today = image
+        heroJob?.cancel()
+        heroImage.animate().cancel()
+        heroImage.alpha = 1f
+        heroImage.setImageDrawable(null)
+        if (image == null) {
+            heroDate.text = ""
+            heroTitle.setText(R.string.loading)
+            heroCaption.text = ""
+            heroProgress.visibility = View.VISIBLE
+            return
+        }
+        val isToday = image.startDate == SimpleDateFormat("yyyyMMdd", Locale.US).format(Calendar.getInstance().time)
+        heroDate.text = if (isToday) getString(R.string.today, formatDate(image.startDate)) else formatDate(image.startDate)
+        heroTitle.text = image.title.ifBlank { image.copyright }
+        heroCaption.text = if (image.title.isBlank()) "" else image.copyright
+        hero.contentDescription = heroTitle.text
+
+        // Bing's portrait crop suits a tall hero, its landscape one a wide hero.
+        val shape = if (heroWidth >= heroHeight) ImageResolution.FULL_HD else ImageResolution.PORTRAIT
+        val urls = listOf(image.urlBase + shape.suffix, image.fallbackUrl)
+        val cached = ImageLoader.cached(urls, heroWidth, heroHeight)
+        if (cached != null) {
+            heroProgress.visibility = View.GONE
+            heroImage.setImageBitmap(cached)
+            return
+        }
+        heroProgress.visibility = View.VISIBLE
+        heroJob = lifecycleScope.launch {
+            val bitmap = ImageLoader.load(this@MainActivity, urls, heroWidth, heroHeight)
+            heroProgress.visibility = View.GONE
+            if (bitmap != null) fadeIn(heroImage, bitmap)
+        }
+    }
+
+    private fun setUpDailyCard() {
+        status = header.findViewById(R.id.status)
+        setProgress = header.findViewById(R.id.setProgress)
+        galleryMessage = header.findViewById(R.id.galleryMessage)
+
+        val dailySwitch = header.findViewById<MaterialSwitch>(R.id.dailySwitch)
+        val scheduleRow = header.findViewById<View>(R.id.scheduleRow)
+        val scheduleValue = header.findViewById<TextView>(R.id.scheduleValue)
         dailySwitch.isChecked = Settings.isDailyEnabled(this)
-        val scheduleLabel = header.findViewById<TextView>(R.id.scheduleLabel)
-        val scheduleButton = header.findViewById<Button>(R.id.scheduleButton)
         fun showSchedule() {
             val (hour, minute) = Settings.scheduleTime(this)
-            scheduleButton.text = formatTime(hour, minute)
-            scheduleButton.isEnabled = dailySwitch.isChecked
-            scheduleLabel.isEnabled = dailySwitch.isChecked
+            scheduleValue.text = formatTime(hour, minute)
+            scheduleRow.isEnabled = dailySwitch.isChecked
+            scheduleRow.alpha = if (dailySwitch.isChecked) 1f else 0.38f
         }
-        scheduleButton.setOnClickListener {
-            val (hour, minute) = Settings.scheduleTime(this)
-            TimePickerDialog(this, { _, h, m ->
-                Settings.setScheduleTime(this, h, m)
+        fun listenTo(picker: MaterialTimePicker) {
+            picker.addOnPositiveButtonClickListener {
+                Settings.setScheduleTime(this, picker.hour, picker.minute)
                 showSchedule()
-            }, hour, minute, android.text.format.DateFormat.is24HourFormat(this)).show()
+            }
+        }
+        // A picker left open across a rotation comes back without its listener.
+        (supportFragmentManager.findFragmentByTag(TIME_PICKER) as? MaterialTimePicker)?.let(::listenTo)
+        scheduleRow.setOnClickListener {
+            val (hour, minute) = Settings.scheduleTime(this)
+            val is24Hour = android.text.format.DateFormat.is24HourFormat(this)
+            val picker = MaterialTimePicker.Builder()
+                .setTimeFormat(if (is24Hour) TimeFormat.CLOCK_24H else TimeFormat.CLOCK_12H)
+                .setHour(hour)
+                .setMinute(minute)
+                .setTitleText(R.string.schedule_label)
+                .build()
+            listenTo(picker)
+            picker.show(supportFragmentManager, TIME_PICKER)
         }
         dailySwitch.setOnCheckedChangeListener { _, checked ->
             Settings.setDailyEnabled(this, checked)
             showSchedule()
         }
         showSchedule()
-
-        setNow.setOnClickListener { setTodayNow() }
-
-        setUpRegionPicker()
-        setUpThemePicker()
-        setUpResolutionPicker()
-        showLastApplied()
-        loadGallery()
     }
 
-    private fun setUpRegionPicker() {
+    /** Draws behind the system bars and pads the content just enough to clear them. */
+    private fun applyWindowInsets() {
+        val heroTop = header.findViewById<View>(R.id.settingsButton)
+        val heroTopMargin = (heroTop.layoutParams as ViewGroupMarginParams).topMargin
+        val bottomPadding = gallery.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(gallery) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            view.updatePadding(left = bars.left, right = bars.right, bottom = bottomPadding + bars.bottom)
+            statusScrim.updateLayoutParams { height = bars.top }
+            heroTop.updateLayoutParams<ViewGroupMarginParams> { topMargin = heroTopMargin + bars.top }
+            insets
+        }
+    }
+
+    /**
+     * Light status bar icons over the hero image; once it scrolls away, fade in a
+     * solid bar behind them and switch to the theme's icon colour.
+     */
+    private fun updateStatusBar() {
+        val heroBottom = when (galleryLayout.findFirstVisibleItemPosition()) {
+            RecyclerView.NO_POSITION -> Int.MAX_VALUE // Not laid out yet: at the top.
+            0 -> header.top + hero.bottom
+            else -> 0
+        }
+        val overPage = heroBottom <= statusScrim.height
+        if (overPage == barsOverPage) return
+        val firstTime = barsOverPage == null
+        barsOverPage = overPage
+        val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = overPage && !night
+        val alpha = if (overPage) 1f else 0f
+        if (firstTime) statusScrim.alpha = alpha else statusScrim.animate().alpha(alpha).setDuration(150).start()
+    }
+
+    private fun showSettings() {
+        val sheet = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.sheet_settings, null)
+        sheet.setContentView(view)
+        view.findViewById<TextView>(R.id.version).text = getString(R.string.version, BuildConfig.VERSION_NAME)
+
+        // Region: index 0 follows the device; the rest map to BingApi.MARKETS in order.
         val deviceMarket = BingApi.deviceMarket()
         val deviceName = BingApi.MARKETS.first { it.first == deviceMarket }.second
-        // Index 0 follows the device; the rest map to BingApi.MARKETS in order.
-        val labels = listOf(getString(R.string.region_automatic, deviceName)) + BingApi.MARKETS.map { it.second }
-        val spinner = header.findViewById<Spinner>(R.id.regionSpinner)
-        spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
-
-        val chosen = Settings.chosenMarket(this)
-        val chosenIndex = BingApi.MARKETS.indexOfFirst { it.first == chosen }
-        spinner.setSelection(if (chosenIndex >= 0) chosenIndex + 1 else 0, false)
-
-        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+        val regions = listOf(getString(R.string.region_automatic, deviceName)) + BingApi.MARKETS.map { it.second }
+        val chosenIndex = BingApi.MARKETS.indexOfFirst { it.first == Settings.chosenMarket(this) }
+        view.findViewById<MaterialAutoCompleteTextView>(R.id.regionMenu).apply {
+            setSimpleItems(regions.toTypedArray())
+            setText(regions[if (chosenIndex >= 0) chosenIndex + 1 else 0], false)
+            setOnItemClickListener { _, _, position, _ ->
                 val market = if (position == 0) null else BingApi.MARKETS[position - 1].first
-                if (market == Settings.chosenMarket(this@MainActivity)) return
+                if (market == Settings.chosenMarket(this@MainActivity)) return@setOnItemClickListener
                 Settings.setChosenMarket(this@MainActivity, market)
                 loadGallery()
             }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
-    }
 
-    private fun setUpResolutionPicker() {
         // Same order as ImageResolution.
-        val labels = listOf(
+        val resolutions = listOf(
             R.string.resolution_uhd, R.string.resolution_full_hd, R.string.resolution_hd, R.string.resolution_portrait,
         ).map(::getString)
-        val spinner = header.findViewById<Spinner>(R.id.resolutionSpinner)
-        spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
-        spinner.setSelection(Settings.resolution(this).ordinal, false)
-        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+        view.findViewById<MaterialAutoCompleteTextView>(R.id.resolutionMenu).apply {
+            setSimpleItems(resolutions.toTypedArray())
+            setText(resolutions[Settings.resolution(this@MainActivity).ordinal], false)
+            setOnItemClickListener { _, _, position, _ ->
                 Settings.setResolution(this@MainActivity, ImageResolution.entries[position])
             }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
+
+        // Same order as ThemeMode.
+        val themeButtons = listOf(R.id.themeSystem, R.id.themeLight, R.id.themeDark)
+        view.findViewById<MaterialButtonToggleGroup>(R.id.themeGroup).apply {
+            check(themeButtons[Settings.themeMode(this@MainActivity).ordinal])
+            addOnButtonCheckedListener { _, id, checked ->
+                if (!checked) return@addOnButtonCheckedListener
+                val mode = ThemeMode.entries[themeButtons.indexOf(id)]
+                if (mode == Settings.themeMode(this@MainActivity)) return@addOnButtonCheckedListener
+                Settings.setThemeMode(this@MainActivity, mode)
+                sheet.dismiss()
+                // Recreates the activity in the new theme; images come back from the cache.
+                AppCompatDelegate.setDefaultNightMode(mode.nightMode)
+            }
+        }
+        show(sheet)
     }
 
-    private fun setUpThemePicker() {
-        val labels = listOf(R.string.theme_system, R.string.theme_light, R.string.theme_dark).map(::getString)
-        val spinner = header.findViewById<Spinner>(R.id.themeSpinner)
-        spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
-        spinner.setSelection(Settings.themeMode(this).ordinal, false)
-        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val mode = ThemeMode.entries[position]
-                if (mode == Settings.themeMode(this@MainActivity)) return
-                Settings.setThemeMode(this@MainActivity, mode)
-                recreate()
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-        }
+    private fun show(sheet: BottomSheetDialog) {
+        openSheet?.dismiss()
+        openSheet = sheet
+        sheet.setOnDismissListener { if (openSheet === sheet) openSheet = null }
+        sheet.show()
     }
 
     private fun loadGallery() {
@@ -184,9 +326,11 @@ class MainActivity : ComponentActivity() {
         adapter.setImages(emptyList())
         adapter.footerText = ""
         pager = GalleryPager(Settings.market(applicationContext))
+        firstPageLoaded = false
         loadingMore = false
         loadFailed = false
         galleryMessage.setText(R.string.loading)
+        showHero(null)
         loadMore()
     }
 
@@ -200,17 +344,30 @@ class MainActivity : ComponentActivity() {
         val pager = pager ?: return
         if (loadingMore || pager.exhausted || loadFailed) return
         loadingMore = true
-        val firstPage = adapter.imageCount == 0
+        val firstPage = !firstPageLoaded
         if (!firstPage) adapter.footerText = getString(R.string.loading_more)
         galleryJob = lifecycleScope.launch {
             try {
                 val images = withContext(Dispatchers.IO) { pager.nextPage() }
-                if (firstPage) galleryMessage.setText(R.string.gallery_hint)
-                adapter.addImages(images)
+                // The newest image is the hero; the grid shows the ones before it.
+                val forGrid = if (firstPage) {
+                    firstPageLoaded = true
+                    galleryMessage.setText(R.string.gallery_hint)
+                    showHero(images.firstOrNull())
+                    images.drop(1)
+                } else {
+                    images
+                }
+                adapter.addImages(forGrid)
+                ImageLoader.prefetch(this@MainActivity, forGrid.map(GalleryAdapter::thumbnailUrls))
                 adapter.footerText = if (pager.exhausted) getString(R.string.gallery_end) else ""
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                if (firstPage) galleryMessage.setText(R.string.load_failed)
+                if (firstPage) {
+                    galleryMessage.setText(R.string.load_failed)
+                    heroProgress.visibility = View.GONE
+                    heroTitle.setText(R.string.load_failed_retry)
+                }
                 adapter.footerText = getString(R.string.load_more_failed)
                 // Wait for the user to tap the footer or scroll before retrying.
                 loadFailed = true
@@ -226,21 +383,22 @@ class MainActivity : ComponentActivity() {
 
     private fun chooseTarget(image: BingImage) {
         if (settingWallpaper) return
-        val targets = WallpaperTarget.entries
-        val labels = targets.map {
-            getString(
-                when (it) {
-                    WallpaperTarget.BOTH -> R.string.target_both
-                    WallpaperTarget.HOME -> R.string.target_home
-                    WallpaperTarget.LOCK -> R.string.target_lock
-                }
-            )
-        }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.set_where, image.title.ifBlank { formatDate(image.startDate) }))
-            .setItems(labels) { _, which -> setWallpaper { WallpaperSetter.apply(applicationContext, image, targets[which]); image } }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        val sheet = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.sheet_target, null)
+        sheet.setContentView(view)
+        view.findViewById<TextView>(R.id.targetTitle).text =
+            getString(R.string.set_where, image.title.ifBlank { formatDate(image.startDate) })
+        mapOf(
+            R.id.targetBoth to WallpaperTarget.BOTH,
+            R.id.targetHome to WallpaperTarget.HOME,
+            R.id.targetLock to WallpaperTarget.LOCK,
+        ).forEach { (id, target) ->
+            view.findViewById<View>(id).setOnClickListener {
+                sheet.dismiss()
+                setWallpaper { WallpaperSetter.apply(applicationContext, image, target); image }
+            }
+        }
+        show(sheet)
     }
 
     private fun setTodayNow() {
@@ -251,6 +409,7 @@ class MainActivity : ComponentActivity() {
         if (settingWallpaper) return
         settingWallpaper = true
         setNow.isEnabled = false
+        setProgress.visibility = View.VISIBLE
         status.setText(R.string.setting)
         lifecycleScope.launch {
             try {
@@ -260,12 +419,17 @@ class MainActivity : ComponentActivity() {
                     val newest = BingApi.fetchImageOfTheDay(Settings.market(applicationContext))
                     action().also { WallpaperSetter.markNewestSeen(applicationContext, newest.id) }
                 }
-                status.text = getString(R.string.set_done, image.title)
+                showLastApplied()
+                Snackbar.make(gallery, getString(R.string.set_done, image.title), Snackbar.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                status.text = getString(R.string.set_failed, e.message ?: e.javaClass.simpleName)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                val message = getString(R.string.set_failed, e.message ?: e.javaClass.simpleName)
+                status.text = message
+                Snackbar.make(gallery, message, Snackbar.LENGTH_LONG).show()
             } finally {
                 settingWallpaper = false
                 setNow.isEnabled = true
+                setProgress.visibility = View.INVISIBLE
             }
         }
     }
@@ -292,4 +456,10 @@ class MainActivity : ComponentActivity() {
         }
         return android.text.format.DateFormat.getTimeFormat(this).format(calendar.time)
     }
+
+    private companion object {
+        const val TIME_PICKER = "time_picker"
+    }
 }
+
+private typealias ViewGroupMarginParams = android.view.ViewGroup.MarginLayoutParams

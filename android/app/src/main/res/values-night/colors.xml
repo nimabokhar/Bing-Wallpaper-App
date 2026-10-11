@@ -1,4 +1,24 @@
 <resources>
-    <color name="accent">#FF4FC3DC</color>
-    <color name="placeholder">#FF2A2A2A</color>
+    <color name="md_primary">#FF54D7F3</color>
+    <color name="md_on_primary">#FF003640</color>
+    <color name="md_primary_container">#FF004E5B</color>
+    <color name="md_on_primary_container">#FFA9EDFF</color>
+    <color name="md_secondary">#FFB2CBD2</color>
+    <color name="md_on_secondary">#FF1D3439</color>
+    <color name="md_secondary_container">#FF334A50</color>
+    <color name="md_on_secondary_container">#FFCEE7EE</color>
+    <color name="md_tertiary">#FFBEC4EB</color>
+    <color name="md_tertiary_container">#FF3E4565</color>
+    <color name="md_on_tertiary_container">#FFDDE1FF</color>
+    <color name="md_surface">#FF0F1416</color>
+    <color name="md_on_surface">#FFDEE3E5</color>
+    <color name="md_surface_variant">#FF3F484B</color>
+    <color name="md_on_surface_variant">#FFBFC8CB</color>
+    <color name="md_outline">#FF899295</color>
+    <color name="md_outline_variant">#FF3F484B</color>
+    <color name="md_surface_container_lowest">#FF0A0F11</color>
+    <color name="md_surface_container_low">#FF171C1E</color>
+    <color name="md_surface_container">#FF1B2022</color>
+    <color name="md_surface_container_high">#FF252B2D</color>
+    <color name="md_surface_container_highest">#FF303638</color>
 </resources>

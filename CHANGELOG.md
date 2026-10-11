@@ -6,6 +6,12 @@ While the apps are in alpha, expect rough edges and changes between builds.
 
 ## [Unreleased]
 
+### Android
+
+- New Material 3 design: today's image fills the top of the screen, with a "Set as wallpaper" button on it; the daily change and its time sit in one card; recent images show as a rounded grid with titles on the pictures. On Android 12 and newer the app's colours follow your wallpaper (Material You).
+- Region, image resolution and theme moved into a Settings sheet behind the gear icon, where the version is shown too. Choosing home, lock or both screens is a bottom sheet.
+- Smoother scrolling: images are decoded at the size they're shown, off the main thread, and kept on disk, so they appear instantly when you come back.
+
 ### Linux
 
 - First Linux version for Fedora, Arch and Debian (.rpm, Arch package and .deb): sets the desktop and lock screen on GNOME, KDE Plasma, Cinnamon, MATE and Budgie, and the desktop on XFCE, LXQt, Sway and Hyprland. Daily updates at a time you choose or as soon as Bing publishes, region picker, and a `bing-wallpaper` command.

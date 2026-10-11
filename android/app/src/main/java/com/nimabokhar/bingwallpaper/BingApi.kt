@@ -19,7 +19,7 @@ data class BingImage(
     val urlBase: String,
     /** Landscape image Bing shows on its home page, used if the chosen size fails. */
     val fallbackUrl: String,
-    /** Small portrait version for the gallery. */
+    /** Small portrait version for the gallery; see [ImageLoader]. */
     val thumbnailUrl: String,
 )
 
@@ -86,21 +86,6 @@ object BingApi {
         }
     }
 
-    /** Downloads the gallery thumbnail, scaled down if the source is full size. */
-    fun downloadThumbnail(image: BingImage): Bitmap? = runCatching {
-        val bytes = runCatching { httpGet(image.thumbnailUrl) }.getOrNull()
-            ?: httpGet(image.fallbackUrl)
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-        var sample = 1
-        while (bounds.outWidth / (sample * 2) >= THUMBNAIL_WIDTH && bounds.outHeight / (sample * 2) >= THUMBNAIL_WIDTH) {
-            sample *= 2
-        }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
-    }.getOrNull()
-
-    private const val THUMBNAIL_WIDTH = 480
-
     /** Downloads [image] at [resolution], falling back to other sizes if Bing doesn't have it. */
     fun downloadBitmap(image: BingImage, resolution: ImageResolution): Bitmap {
         val sizes = listOf(resolution, ImageResolution.UHD, ImageResolution.PORTRAIT).distinct()
@@ -111,7 +96,7 @@ object BingApi {
         throw IOException("Could not download image ${image.id}")
     }
 
-    private fun httpGet(url: String): ByteArray {
+    fun httpGet(url: String): ByteArray {
         val conn = URL(url).openConnection() as HttpURLConnection
         try {
             conn.connectTimeout = 15_000

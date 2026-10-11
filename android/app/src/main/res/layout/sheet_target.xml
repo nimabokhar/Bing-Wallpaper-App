@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="24dp"
+    android:paddingBottom="16dp">
+
+    <TextView
+        android:id="@+id/targetTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:paddingHorizontal="24dp"
+        android:paddingBottom="8dp"
+        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+    <TextView
+        android:id="@+id/targetBoth"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="?attr/selectableItemBackground"
+        android:drawableStart="@drawable/ic_phone"
+        android:drawablePadding="20dp"
+        android:drawableTint="?attr/colorOnSurfaceVariant"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="24dp"
+        android:text="@string/target_both"
+        android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+    <TextView
+        android:id="@+id/targetHome"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="?attr/selectableItemBackground"
+        android:drawableStart="@drawable/ic_home"
+        android:drawablePadding="20dp"
+        android:drawableTint="?attr/colorOnSurfaceVariant"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="24dp"
+        android:text="@string/target_home"
+        android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+    <TextView
+        android:id="@+id/targetLock"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="?attr/selectableItemBackground"
+        android:drawableStart="@drawable/ic_lock"
+        android:drawablePadding="20dp"
+        android:drawableTint="?attr/colorOnSurfaceVariant"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="24dp"
+        android:text="@string/target_lock"
+        android:textAppearance="?attr/textAppearanceBodyLarge" />
+</LinearLayout>

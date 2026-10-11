@@ -1,0 +1,5 @@
+<resources>
+    <dimen name="grid_spacing">12dp</dimen>
+    <dimen name="hero_corner">32dp</dimen>
+    <dimen name="thumb_corner">20dp</dimen>
+</resources>
