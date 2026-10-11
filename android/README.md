@@ -16,6 +16,7 @@ Requires Android 7.0 (API 24) or newer.
 ## Install
 
 1. Open the [**latest release**](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/tag/latest) on your phone and download `bing-wallpaper.apk`.
+   Each version also has its own tagged release (for example `v0.1.0-alpha.1`) on the [releases page](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases).
    (Builds from pull requests are also attached to each run on the Actions tab as the `bing-wallpaper-apk` artifact.)
 2. Open the file and allow your browser or file manager to install unknown apps when Android asks.
 3. Launch **Bing Wallpaper** and tap **Set today's image now** (or pick an image) once. Daily updates run from then on.
@@ -34,6 +35,10 @@ By default each CI build is signed with a fresh debug key, so Android will refus
 | `SIGNING_KEY_PASSWORD` | key password |
 
 Create a keystore with `keytool -genkeypair -keystore release.jks -alias bing -keyalg RSA -validity 10000` and encode it with `base64 -w0 release.jks`.
+
+## Versioning
+
+The version comes from [`VERSION`](../VERSION) at the repository root, shared with the other platforms. `versionName` is that version (plus `+build.<run number>` for CI builds after it was released), and `versionCode` is derived from it so newer versions always install over older ones: `0.1.0-alpha.1` is 100101, `0.1.0-beta.1` is 100201, `0.1.0-rc.1` is 100301 and `0.1.0` is 100900.
 
 ## Build locally
 
