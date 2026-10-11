@@ -10,6 +10,7 @@ object Settings {
     private const val KEY_DAILY = "daily_enabled"
     private const val KEY_MARKET = "market"
     private const val KEY_THEME = "theme"
+    private const val KEY_RESOLUTION = "resolution"
     private const val KEY_HOUR = "schedule_hour"
     private const val KEY_MINUTE = "schedule_minute"
 
@@ -57,5 +58,14 @@ object Settings {
 
     fun setThemeMode(context: Context, mode: ThemeMode) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_THEME, mode.name).apply()
+    }
+
+    fun resolution(context: Context): ImageResolution {
+        val name = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_RESOLUTION, null)
+        return ImageResolution.entries.firstOrNull { it.name == name } ?: ImageResolution.UHD
+    }
+
+    fun setResolution(context: Context, resolution: ImageResolution) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_RESOLUTION, resolution.name).apply()
     }
 }

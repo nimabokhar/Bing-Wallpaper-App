@@ -39,7 +39,7 @@ object WallpaperSetter {
 
     /** Downloads [image] at full size and applies it to [target]. */
     fun apply(context: Context, image: BingImage, target: WallpaperTarget) {
-        val bitmap = BingApi.downloadBitmap(image)
+        val bitmap = BingApi.downloadBitmap(image, Settings.resolution(context))
         val crop = centerCropFor(context, bitmap)
         WallpaperManager.getInstance(context).setBitmap(bitmap, crop, true, target.flags)
         bitmap.recycle()
