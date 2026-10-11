@@ -17,7 +17,7 @@ object WallpaperSetter {
      * Returns the applied image, or null if it was already applied and [force] is false.
      */
     fun applyToday(context: Context, force: Boolean): BingImage? {
-        val image = BingApi.fetchImageOfTheDay()
+        val image = BingApi.fetchImageOfTheDay(Settings.market(context))
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!force && prefs.getString(KEY_LAST_ID, null) == image.id) return null
 

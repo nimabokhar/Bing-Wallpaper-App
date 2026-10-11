@@ -7,6 +7,8 @@
     <string name="setting">Setting wallpaper…</string>
     <string name="set_done">Wallpaper set on home and lock screen.</string>
     <string name="set_failed">Couldn\'t set the wallpaper: %1$s</string>
+    <string name="region">Bing region</string>
+    <string name="region_automatic">Automatic (%1$s)</string>
     <string name="last_applied">Last applied: %1$s</string>
     <string name="never_applied">No wallpaper applied yet.</string>
 </resources>

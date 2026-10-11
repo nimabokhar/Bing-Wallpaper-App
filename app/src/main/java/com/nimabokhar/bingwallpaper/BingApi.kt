@@ -23,18 +23,31 @@ object BingApi {
     private const val BASE = "https://www.bing.com"
     private const val DEFAULT_MARKET = "en-US"
 
-    // Markets Bing publishes a distinct image of the day for.
-    private val SUPPORTED_MARKETS = setOf(
-        "en-US", "en-GB", "en-AU", "en-CA", "en-IN", "en-NZ",
-        "de-DE", "fr-FR", "fr-CA", "es-ES", "it-IT", "pt-BR", "ja-JP", "zh-CN",
+    /** Markets Bing publishes an image of the day for, with display names. */
+    val MARKETS: List<Pair<String, String>> = listOf(
+        "en-US" to "United States",
+        "en-GB" to "United Kingdom",
+        "en-CA" to "Canada (English)",
+        "fr-CA" to "Canada (French)",
+        "en-AU" to "Australia",
+        "en-NZ" to "New Zealand",
+        "en-IN" to "India",
+        "de-DE" to "Germany",
+        "fr-FR" to "France",
+        "es-ES" to "Spain",
+        "it-IT" to "Italy",
+        "pt-BR" to "Brazil",
+        "ja-JP" to "Japan",
+        "zh-CN" to "China",
     )
 
-    fun marketFor(locale: Locale = Locale.getDefault()): String {
+    /** The market matching the device's language and region, or en-US. */
+    fun deviceMarket(locale: Locale = Locale.getDefault()): String {
         val tag = "${locale.language}-${locale.country}"
-        return SUPPORTED_MARKETS.firstOrNull { it.equals(tag, ignoreCase = true) } ?: DEFAULT_MARKET
+        return MARKETS.firstOrNull { it.first.equals(tag, ignoreCase = true) }?.first ?: DEFAULT_MARKET
     }
 
-    fun fetchImageOfTheDay(market: String = marketFor()): BingImage {
+    fun fetchImageOfTheDay(market: String): BingImage {
         val json = JSONObject(httpGet("$BASE/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=$market").decodeToString())
         val image = json.getJSONArray("images").getJSONObject(0)
         val urlBase = image.getString("urlbase")

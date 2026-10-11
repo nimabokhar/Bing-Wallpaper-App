@@ -40,6 +40,19 @@
             android:layout_marginTop="4dp"
             android:textAppearance="@android:style/TextAppearance.Material.Caption" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/region"
+            android:textAppearance="@android:style/TextAppearance.Material.Body2" />
+
+        <Spinner
+            android:id="@+id/regionSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" />
+
         <Button
             android:id="@+id/setNow"
             android:layout_width="match_parent"
