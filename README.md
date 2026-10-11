@@ -44,13 +44,14 @@ All builds are published to the same [**latest release**](https://github.com/nim
 - **Home and lock screen:** the daily image goes on both. For any image you pick from the gallery, choose home, lock or both.
 - **Daily change at a set time:** the wallpaper changes once a day at the time you set under **Change at**. If Bing hasn't published the day's image yet, the app checks again hourly for a few hours. The schedule survives reboots.
 - **Gallery:** shows Bing's images newest first and loads older ones as you scroll, back to the roughly 15 days Bing keeps. A hand-picked image stays until the next scheduled change brings a newer one.
-- **Set today's image now** applies the newest image straight away.
+- **Today's image** fills the top of the screen; **Set as wallpaper** applies it straight away.
 - **Bing region:** pick which country's image you get, or leave it on Automatic to follow your phone's language and region.
 - **Image resolution:** 4K/UHD (default), 1920×1080, 1366×768 or 1080×1920 portrait. The image is cropped to fit your screen.
 - **Dark mode:** follows your phone's theme, or pick Light or Dark.
-- **Foldables:** the image is cropped for the unfolded screen so it stays sharp on both screens, and the gallery shows more columns when unfolded.
+- **Material You design:** on Android 12 and newer the app's colours follow your wallpaper. Region, resolution and theme live in the Settings sheet behind the gear icon.
+- **Foldables:** the image is cropped for the unfolded screen so it stays sharp on both screens, and the gallery shows its wide image cards side by side when unfolded.
 - **Themed icon:** on Android 13 and newer, the launcher icon follows your wallpaper colours.
-- The app shows its version at the bottom of the main screen.
+- The app shows its version in Settings.
 
 Requires Android 7.0 or newer. More detail in the [Android README](android/README.md).
 
@@ -74,7 +75,7 @@ More detail, including the full list of desktops and commands, in the [Linux REA
 
 1. On your phone, download [`bing-wallpaper.apk`](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.apk).
 2. Open it, and allow your browser or file manager to install unknown apps when Android asks.
-3. Open **Bing Wallpaper** and tap **Set today's image now**. Daily changes run on their own from then on.
+3. Open **Bing Wallpaper** and tap **Set as wallpaper**. Daily changes run on their own from then on.
 
 Each new alpha build is signed with a fresh key until a signing key is set up, so you may need to uninstall the old version before installing a new one (see the [Android README](android/README.md#updating-without-uninstalling)). If daily changes stop, set the app's battery usage to Unrestricted (Settings → Apps → Bing Wallpaper → Battery).
 

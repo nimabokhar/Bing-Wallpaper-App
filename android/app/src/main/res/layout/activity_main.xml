@@ -1,10 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The settings header, the image grid and the footer all scroll together in one
-     RecyclerView, so only the thumbnails on screen are kept in memory. -->
-<androidx.recyclerview.widget.RecyclerView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/gallery"
+<!-- The app draws behind the system bars. The hero image sits under the status
+     bar; once it scrolls away, statusScrim fades in so the icons stay readable. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:clipToPadding="false"
-    android:fitsSystemWindows="true"
-    android:paddingHorizontal="4dp" />
+    android:background="?attr/colorSurface">
+
+    <!-- The header, the image grid and the footer all scroll together in one
+         RecyclerView, so only the thumbnails on screen are kept in memory. -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/gallery"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:overScrollMode="never" />
+
+    <View
+        android:id="@+id/statusScrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:alpha="0"
+        android:background="?attr/colorSurface" />
+</FrameLayout>

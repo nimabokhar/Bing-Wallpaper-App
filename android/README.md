@@ -4,13 +4,16 @@ Sets your phone's home screen and lock screen wallpaper to the [Bing image of th
 
 ## Features
 
-- **Latest images** shows Bing's images of the day for your region, newest first, and loads more as you scroll, back to the roughly 15 days Bing keeps. Tap an image to set it on the home screen, the lock screen, or both.
-- **Set today's image now** applies the newest image to both home and lock screen immediately.
-- **Change automatically every day** (on by default) changes the wallpaper once a day at the time you choose under **Change at** (7:00 by default). If Bing hasn't published the day's image for your region yet, it checks again hourly for a few hours. The schedule survives reboots. If you pick an older image by hand, it stays until the next scheduled change brings a newer Bing image.
-- **Bing region** lets you pick which country's image you get. The default follows your phone's language and region (falling back to United States).
-- **Image resolution** picks which size Bing image to download: 4K/UHD (default), 1920×1080, 1366×768 or 1080×1920 portrait. It applies to both automatic and manual changes, and the image is cropped to fit your screen.
-- **Dark mode:** follows your phone's theme by default, or pick Light or Dark in the app.
-- **Foldable phones:** the wallpaper is cropped for the inner (unfolded) screen, and Android centre-crops it for the narrower cover screen, so it looks right and stays sharp on both. The gallery shows more columns when the phone is unfolded.
+- **Today's image** fills the top of the screen. Tap **Set as wallpaper** to apply it to both home and lock screen right away, or tap the image to choose home, lock or both.
+- **Recent images** shows Bing's images of the day for your region, newest first, and loads more as you scroll, back to the roughly 15 days Bing keeps. Tap an image to set it on the home screen, the lock screen, or both.
+- **Change every day** (on by default) changes the wallpaper once a day at the time you choose under **Change at** (7:00 by default). If Bing hasn't published the day's image for your region yet, it checks again hourly for a few hours. The schedule survives reboots. If you pick an older image by hand, it stays until the next scheduled change brings a newer Bing image.
+- **Settings** (the gear icon on today's image):
+  - **Bing region** lets you pick which country's image you get. The default follows your phone's language and region (falling back to United States).
+  - **Image resolution** picks which size Bing image to download: 4K/UHD (default), 1920×1080, 1366×768 or 1080×1920 portrait. It applies to both automatic and manual changes, and the image is cropped to fit your screen.
+  - **Theme:** follows your phone's light or dark mode by default, or pick Light or Dark.
+- **Material You:** on Android 12 and newer the app's colours come from your wallpaper, so they change with each day's image.
+- **Smooth scrolling:** images are downloaded once and kept on disk (old ones are cleared after a month), decoded at the size they're shown on a background thread, and drawn as GPU bitmaps, so the main thread never waits on an image.
+- **Foldable phones:** the wallpaper is cropped for the inner (unfolded) screen, and Android centre-crops it for the narrower cover screen, so it looks right and stays sharp on both. The gallery shows its wide image cards side by side when the phone is unfolded.
 
 Requires Android 7.0 (API 24) or newer.
 
@@ -20,7 +23,7 @@ Requires Android 7.0 (API 24) or newer.
    Each version also has its own tagged release (for example `v0.1.0-alpha.1`) on the [releases page](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases).
    (Builds from pull requests are also attached to each run on the Actions tab as the `bing-wallpaper-apk` artifact.)
 2. Open the file and allow your browser or file manager to install unknown apps when Android asks.
-3. Launch **Bing Wallpaper** and tap **Set today's image now** (or pick an image) once. Daily updates run from then on.
+3. Launch **Bing Wallpaper** and tap **Set as wallpaper** (or pick an image) once. Daily updates run from then on.
 
 If daily updates stop on your phone, exclude the app from battery optimisation (Settings → Apps → Bing Wallpaper → Battery → Unrestricted). Some manufacturers aggressively stop background work.
 

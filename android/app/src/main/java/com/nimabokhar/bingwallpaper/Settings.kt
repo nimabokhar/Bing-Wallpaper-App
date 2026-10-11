@@ -1,9 +1,14 @@
 package com.nimabokhar.bingwallpaper
 
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 
 /** App theme choice, in the order shown in the picker. */
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
+enum class ThemeMode(val nightMode: Int) {
+    SYSTEM(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM),
+    LIGHT(AppCompatDelegate.MODE_NIGHT_NO),
+    DARK(AppCompatDelegate.MODE_NIGHT_YES),
+}
 
 object Settings {
     private const val PREFS = "settings"

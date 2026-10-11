@@ -1,4 +1,29 @@
 <resources>
-    <color name="accent">#FF00809D</color>
-    <color name="placeholder">#FFE0E0E0</color>
+    <!-- Material 3 palette generated from the app's teal (#00809D). On Android 12
+         and newer the colours come from the user's wallpaper instead. -->
+    <color name="md_primary">#FF006879</color>
+    <color name="md_on_primary">#FFFFFFFF</color>
+    <color name="md_primary_container">#FFA9EDFF</color>
+    <color name="md_on_primary_container">#FF001F26</color>
+    <color name="md_secondary">#FF4B6268</color>
+    <color name="md_on_secondary">#FFFFFFFF</color>
+    <color name="md_secondary_container">#FFCEE7EE</color>
+    <color name="md_on_secondary_container">#FF061F24</color>
+    <color name="md_tertiary">#FF565D7E</color>
+    <color name="md_tertiary_container">#FFDDE1FF</color>
+    <color name="md_on_tertiary_container">#FF131A37</color>
+    <color name="md_surface">#FFF5FAFC</color>
+    <color name="md_on_surface">#FF171C1E</color>
+    <color name="md_surface_variant">#FFDBE4E7</color>
+    <color name="md_on_surface_variant">#FF3F484B</color>
+    <color name="md_outline">#FF6F797B</color>
+    <color name="md_outline_variant">#FFBFC8CB</color>
+    <color name="md_surface_container_lowest">#FFFFFFFF</color>
+    <color name="md_surface_container_low">#FFEFF4F6</color>
+    <color name="md_surface_container">#FFE9EFF1</color>
+    <color name="md_surface_container_high">#FFE3E9EB</color>
+    <color name="md_surface_container_highest">#FFDEE3E5</color>
+
+    <color name="on_image">#FFFFFFFF</color>
+    <color name="on_image_secondary">#D9FFFFFF</color>
 </resources>

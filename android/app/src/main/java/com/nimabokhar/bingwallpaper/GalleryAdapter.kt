@@ -1,7 +1,5 @@
 package com.nimabokhar.bingwallpaper
 
-import android.graphics.Bitmap
-import android.util.LruCache
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,31 +8,30 @@ import android.widget.TextView
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
- * The main screen's list: the settings [header], then a grid of images, then a
- * footer line. Thumbnails are loaded as items come on screen and kept in a small
- * memory cache, so scrolling through hundreds of images stays light.
+ * The main screen's list: the [header] (today's image and settings), then a grid
+ * of images, then a footer line. Thumbnails come from [ImageLoader], decoded at
+ * [thumbWidth] pixels wide, so binding a cell on the main thread is just setting
+ * a ready bitmap.
  */
 class GalleryAdapter(
     private val header: View,
     private val scope: LifecycleCoroutineScope,
+    private val thumbWidth: Int,
     private val formatDate: (String) -> String,
     private val onImageClick: (BingImage) -> Unit,
     private val onFooterClick: () -> Unit,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val images = mutableListOf<BingImage>()
-    private val thumbnails = object : LruCache<String, Bitmap>(cacheSizeKb()) {
-        override fun sizeOf(key: String, value: Bitmap) = value.byteCount / 1024
-    }
+    private val thumbHeight = (thumbWidth * ThumbnailFrame.HEIGHT_RATIO).toInt()
 
     var footerText: CharSequence = ""
         set(value) {
+            if (field == value) return
             field = value
             notifyItemChanged(itemCount - 1)
         }
@@ -49,6 +46,7 @@ class GalleryAdapter(
     }
 
     fun addImages(more: List<BingImage>) {
+        if (more.isEmpty()) return
         val start = 1 + images.size
         images += more
         notifyItemRangeInserted(start, more.size)
@@ -57,7 +55,7 @@ class GalleryAdapter(
     /** Header and footer span the whole row; images take one column each. */
     fun spanSizeLookup(columns: Int) = object : GridLayoutManager.SpanSizeLookup() {
         override fun getSpanSize(position: Int) = if (getItemViewType(position) == TYPE_IMAGE) 1 else columns
-    }
+    }.apply { isSpanIndexCacheEnabled = true }
 
     override fun getItemCount() = images.size + 2
 
@@ -96,25 +94,31 @@ class GalleryAdapter(
 
         fun bind(image: BingImage) {
             unbind()
-            title.text = image.title.ifBlank { image.copyright }
-            date.text = formatDate(image.startDate)
+            val titleText = image.title.ifBlank { image.copyright }
+            val dateText = formatDate(image.startDate)
+            title.text = titleText
+            date.text = dateText
+            itemView.contentDescription = "$titleText, $dateText"
             itemView.setOnClickListener { onImageClick(image) }
 
-            val cached = thumbnails.get(image.thumbnailUrl)
-            thumb.setImageBitmap(cached)
-            if (cached == null) {
-                job = scope.launch {
-                    val bitmap = withContext(Dispatchers.IO) { BingApi.downloadThumbnail(image) } ?: return@launch
-                    thumbnails.put(image.thumbnailUrl, bitmap)
-                    thumb.setImageBitmap(bitmap)
-                }
+            val urls = thumbnailUrls(image)
+            val cached = ImageLoader.cached(urls, thumbWidth, thumbHeight)
+            if (cached != null) {
+                thumb.setImageBitmap(cached)
+                return
+            }
+            job = scope.launch {
+                val bitmap = ImageLoader.load(itemView.context, urls, thumbWidth, thumbHeight) ?: return@launch
+                fadeIn(thumb, bitmap)
             }
         }
 
         fun unbind() {
             job?.cancel()
             job = null
-            thumb.setImageBitmap(null)
+            thumb.animate().cancel()
+            thumb.alpha = 1f
+            thumb.setImageDrawable(null)
         }
     }
 
@@ -123,7 +127,13 @@ class GalleryAdapter(
         private const val TYPE_IMAGE = 1
         private const val TYPE_FOOTER = 2
 
-        /** An eighth of the app's memory for thumbnails. */
-        private fun cacheSizeKb() = (Runtime.getRuntime().maxMemory() / 1024 / 8).toInt()
+        fun thumbnailUrls(image: BingImage) = listOf(image.thumbnailUrl, image.fallbackUrl)
     }
+}
+
+/** Shows a freshly loaded [bitmap] with a short fade, so images don't pop in. */
+fun fadeIn(view: ImageView, bitmap: android.graphics.Bitmap) {
+    view.alpha = 0f
+    view.setImageBitmap(bitmap)
+    view.animate().alpha(1f).setDuration(180).start()
 }
