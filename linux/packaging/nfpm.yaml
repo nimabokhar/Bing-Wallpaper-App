@@ -36,7 +36,8 @@ overrides:
       - python3 >= 3.8
     recommends:
       - python3-gobject
-      - gtk4
+      - typelib(Gtk) = 4.0
+      - typelib(cairo)
   archlinux:
     depends:
       - python
