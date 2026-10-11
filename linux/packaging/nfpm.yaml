@@ -2,7 +2,9 @@
 name: bing-wallpaper
 arch: all
 platform: linux
-version: ${VERSION}
+# Already in each package manager's own format; see the Makefile.
+version: ${PKG_VERSION}
+version_schema: none
 release: 1
 section: graphics
 priority: optional

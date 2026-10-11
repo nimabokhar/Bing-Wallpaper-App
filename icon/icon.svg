@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="1024" height="1024">
+  <!-- Bing Wallpaper app icon: the sun rising behind mountains at dawn.
+       Source of truth for every platform. Android vectors in
+       android/app/src/main/res/drawable mirror these shapes. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A2A6C"/>
+      <stop offset="0.25" stop-color="#2E6FB0"/>
+      <stop offset="0.45" stop-color="#F0855A"/>
+      <stop offset="0.6" stop-color="#FFC970"/>
+    </linearGradient>
+    <clipPath id="tile">
+      <rect width="108" height="108" rx="24"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="108" height="108" fill="url(#sky)"/>
+    <circle cx="54" cy="60" r="21" fill="#FFF3C4" fill-opacity="0.3"/>
+    <circle cx="54" cy="60" r="14" fill="#FFE08A"/>
+    <path fill="#3D5A99" d="M0,70 L18,58 L30,64 L44,52 L58,66 L72,54 L90,64 L108,56 V108 H0 Z"/>
+    <path fill="#1B2E4F" d="M0,82 L20,70 L38,80 L60,66 L82,78 L96,72 L108,78 V108 H0 Z"/>
+  </g>
+</svg>

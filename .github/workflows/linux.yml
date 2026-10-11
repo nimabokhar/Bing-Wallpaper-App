@@ -3,9 +3,9 @@ name: Linux packages
 on:
   push:
     branches: [main]
-    paths: ["linux/**", ".github/workflows/linux.yml", "LICENSE"]
+    paths: ["linux/**", "icon/**", "VERSION", ".github/workflows/linux.yml", ".github/scripts/release.sh", "LICENSE"]
   pull_request:
-    paths: ["linux/**", ".github/workflows/linux.yml", "LICENSE"]
+    paths: ["linux/**", "icon/**", "VERSION", ".github/workflows/linux.yml", ".github/scripts/release.sh", "LICENSE"]
   workflow_dispatch:
 
 permissions:
@@ -48,10 +48,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: bing-wallpaper-linux
-          path: |
-            linux/dist/bing-wallpaper.deb
-            linux/dist/bing-wallpaper.rpm
-            linux/dist/bing-wallpaper.pkg.tar.zst
+          path: linux/dist/
 
   install:
     needs: package
@@ -128,3 +125,13 @@ jobs:
           gh release view latest >/dev/null 2>&1 || \
             gh release create latest --title "Latest build" --notes "Built automatically from main." || true
           gh release upload latest dist/bing-wallpaper.deb dist/bing-wallpaper.rpm dist/bing-wallpaper.pkg.tar.zst --clobber
+      - name: Attach to the versioned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The release for the version in VERSION (e.g. v0.1.0-alpha.1) gets the
+          # versioned file names; it is left alone once released from another commit.
+          if [ -x .github/scripts/release.sh ]; then
+            .github/scripts/release.sh check
+            .github/scripts/release.sh publish $(ls dist/bing-wallpaper[_-]*)
+          fi

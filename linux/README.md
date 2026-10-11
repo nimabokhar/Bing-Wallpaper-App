@@ -33,7 +33,7 @@ For any other setup, add a command to `~/.config/bing-wallpaper/config.json`, an
 
 ## Install
 
-Download the package for your distro from the [**latest release**](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/tag/latest). Builds from pull requests are also attached to each run on the Actions tab as the `bing-wallpaper-linux` artifact.
+Download the package for your distro from the [**latest release**](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/tag/latest), or a specific version from the [releases page](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases). The app is in alpha: versions look like `0.1.0-alpha.1`, written `0.1.0~alpha.1` in the .deb and .rpm and `0.1.0alpha.1` in the Arch package so every package manager upgrades from alpha to the final release correctly. Builds from pull requests are also attached to each run on the Actions tab as the `bing-wallpaper-linux` artifact.
 
 **Debian / Ubuntu**
 

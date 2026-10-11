@@ -304,6 +304,7 @@ class App(Gtk.Application):
         super().__init__(application_id=APP_ID)
 
     def do_activate(self) -> None:
+        Gtk.Window.set_default_icon_name(APP_ID)
         window = self.get_active_window() or Window(self)
         window.present()
 

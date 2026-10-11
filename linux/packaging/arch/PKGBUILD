@@ -1,7 +1,7 @@
 # Maintainer: Nima Bokhar <nimabokhar@users.noreply.github.com>
 # Builds from the latest code on GitHub. To install: makepkg -si
 pkgname=bing-wallpaper-git
-pkgver=1.0.0
+pkgver=0.1.0alpha.1
 pkgrel=1
 pkgdesc="Sets your desktop and lock screen wallpaper to the Bing image of the day"
 arch=('any')
@@ -18,7 +18,7 @@ sha256sums=('SKIP')
 pkgver() {
   cd "$pkgname"
   local version
-  version=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' linux/bing_wallpaper/__init__.py)
+  version=$(make -s -C linux version | tr -d -)
   printf "%s.r%s.g%s" "$version" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
 }
 
