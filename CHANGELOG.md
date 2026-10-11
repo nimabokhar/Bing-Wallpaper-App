@@ -6,6 +6,15 @@ While the apps are in alpha, expect rough edges and changes between builds.
 
 ## [Unreleased]
 
+### Linux
+
+- First Linux version for Fedora, Arch and Debian (.rpm, Arch package and .deb): sets the desktop and lock screen on GNOME, KDE Plasma, Cinnamon, MATE and Budgie, and the desktop on XFCE, LXQt, Sway and Hyprland. Daily updates at a time you choose or as soon as Bing publishes, region picker, and a `bing-wallpaper` command.
+- The gallery loads older images as you scroll, back through every image Bing still has (about two weeks).
+
+### Build
+
+- CI actions moved to their Node 24 versions, removing the Node.js 20 deprecation warning.
+
 ## [0.1.0-alpha.1] - 2026-10-11
 
 First alpha.

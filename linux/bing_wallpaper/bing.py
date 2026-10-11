@@ -14,8 +14,10 @@ from . import __version__
 BASE = "https://www.bing.com"
 DEFAULT_MARKET = "en-US"
 
-#: Bing's archive only goes back this many days.
+#: Images per request; Bing returns at most 8.
 MAX_IMAGES = 8
+#: Bing's feed reaches back about two weeks: idx (days back) stops at 7, n at 8.
+MAX_IDX = 7
 
 #: Markets Bing publishes an image of the day for, with display names.
 MARKETS = [
@@ -101,10 +103,30 @@ def parse_archive(data: dict) -> List[BingImage]:
     return images
 
 
-def fetch_latest(market: str, count: int = MAX_IMAGES) -> List[BingImage]:
-    """The latest images, newest first."""
-    url = f"{BASE}/HPImageArchive.aspx?format=js&idx=0&n={count}&mkt={market}"
+def fetch_latest(market: str, count: int = MAX_IMAGES, start: int = 0) -> List[BingImage]:
+    """Up to `count` (at most 8) images, newest first, starting `start` days back."""
+    url = f"{BASE}/HPImageArchive.aspx?format=js&idx={start}&n={count}&mkt={market}"
     return parse_archive(json.loads(http_get(url).decode("utf-8")))
+
+
+def fetch_page(market: str, have: int) -> List[BingImage]:
+    """The next images for a gallery that already shows `have` of them, newest first.
+    Bing can't start further back than MAX_IDX days, so pages overlap and callers drop
+    images they already have; an empty result (after that) means there are no more."""
+    if have >= MAX_IDX + MAX_IMAGES:
+        return []
+    return fetch_latest(market, MAX_IMAGES, min(have, MAX_IDX))
+
+
+def fetch_all(market: str) -> List[BingImage]:
+    """Every image Bing still has (about two weeks), newest first."""
+    images: List[BingImage] = []
+    while True:
+        seen = {i.id for i in images}
+        new = [i for i in fetch_page(market, len(images)) if i.id not in seen]
+        if not new:
+            return images
+        images += new
 
 
 def http_get(url: str, timeout: float = 30) -> bytes:

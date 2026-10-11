@@ -37,7 +37,7 @@ class Window(Gtk.ApplicationWindow):
     def __init__(
         self,
         app: Gtk.Application,
-        fetch_latest: Callable[[str], List[bing.BingImage]] = bing.fetch_latest,
+        fetch_page: Callable[[str, int], List[bing.BingImage]] = bing.fetch_page,
         fetch_thumbnail: Callable[[bing.BingImage], Optional[str]] = lambda i: (
             str(p) if (p := core.thumbnail(i)) else None
         ),
@@ -46,12 +46,15 @@ class Window(Gtk.ApplicationWindow):
     ) -> None:
         super().__init__(application=app, title="Bing Wallpaper")
         self.set_default_size(860, 680)
-        self.fetch_latest = fetch_latest
+        self.fetch_page = fetch_page
         self.fetch_thumbnail = fetch_thumbnail
         self.apply_image = apply
         self.set_daily_time = set_daily_time
         self.cfg = settings.Settings()
         self.images: List[bing.BingImage] = []
+        self.loading = False
+        self.exhausted = False
+        self.generation = 0
         self.apply_after_load = False
 
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -129,6 +132,9 @@ class Window(Gtk.ApplicationWindow):
         )
         scroller = Gtk.ScrolledWindow(vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
         scroller.set_child(self.flow)
+        # Infinite scroll: reaching the bottom loads older images.
+        scroller.connect("edge-reached", self.on_edge_reached)
+        self.scroller = scroller
         outer.append(scroller)
 
         self.status = Gtk.Label(xalign=0, wrap=True)
@@ -149,22 +155,60 @@ class Window(Gtk.ApplicationWindow):
             nxt = child.get_next_sibling()
             self.flow.remove(child)
             child = nxt
-        self.set_status("Loading the latest Bing images...")
-        market = self.cfg.market
-        _in_background(lambda: self.fetch_latest(market), self.on_loaded)
+        self.images = []
+        self.exhausted = False
+        self.loading = False
+        # Results from a request made before a region change are dropped.
+        self.generation += 1
+        self.load_more()
 
-    def on_loaded(self, images: object, error: Optional[Exception]) -> None:
+    def load_more(self) -> None:
+        if self.loading or self.exhausted:
+            return
+        self.loading = True
+        self.set_status("Loading Bing images..." if not self.images else "Loading older images...")
+        market, have, generation = self.cfg.market, len(self.images), self.generation
+        _in_background(lambda: self.fetch_page(market, have),
+                       lambda images, error: self.on_loaded(images, error, generation))
+
+    def on_edge_reached(self, _scroller: Gtk.ScrolledWindow, position: Gtk.PositionType) -> None:
+        if position == Gtk.PositionType.BOTTOM:
+            self.load_more()
+
+    def fill_window(self) -> bool:
+        """Keeps loading until the gallery can scroll, since a short page never
+        reaches the bottom edge to trigger the next one."""
+        adj = self.scroller.get_vadjustment()
+        if adj.get_upper() <= adj.get_page_size() + 1:
+            self.load_more()
+        return False
+
+    def on_loaded(self, images: object, error: Optional[Exception], generation: int = 0) -> None:
+        if generation != self.generation:
+            return
+        self.loading = False
         if error is not None:
             self.set_status(f"Couldn't reach Bing: {error}")
             return
-        self.images = list(images)  # type: ignore[arg-type]
+        seen = {i.id for i in self.images}
+        new = [i for i in images if i.id not in seen]  # type: ignore[union-attr]
+        first_page = not self.images
+        if not new:
+            self.exhausted = True
+            self.set_status(
+                f"Bing region: {bing.market_name(self.cfg.market)}. That's every image Bing still has "
+                f"({len(self.images)} days). Click an image to use it."
+            )
+            return
+        self.images += new
         state = settings.State()
-        for image in self.images:
+        for image in new:
             self.flow.append(self.card(image, current=image.id == state.get("last_applied")))
         self.set_status(f"Bing region: {bing.market_name(self.cfg.market)}. Click an image to use it.")
-        if self.apply_after_load and self.images:
+        if first_page and self.apply_after_load:
             self.apply_after_load = False
             self.apply_in_background(self.images[0], self.cfg.get("daily_target") or desktop.BOTH)
+        GLib.idle_add(self.fill_window)
 
     def card(self, image: bing.BingImage, current: bool) -> Gtk.Widget:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)

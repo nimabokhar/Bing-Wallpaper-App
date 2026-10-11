@@ -116,7 +116,7 @@ def apply(
 
 def latest(cfg: Optional[settings.Settings] = None) -> List[bing.BingImage]:
     cfg = cfg or settings.Settings()
-    return bing.fetch_latest(cfg.market)
+    return bing.fetch_all(cfg.market)
 
 
 def update(force: bool = False, now: Optional[datetime.datetime] = None) -> Optional[bing.BingImage]:

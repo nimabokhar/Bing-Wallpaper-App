@@ -17,6 +17,16 @@ from bing_wallpaper import bing, desktop, gui  # noqa: E402
 from test_bing_wallpaper import ARCHIVE  # noqa: E402
 
 applied = []
+pages = []
+
+
+def fake_page(market, have):
+    # Two pages of Bing images, then nothing more.
+    pages.append(have)
+    images = bing.parse_archive(ARCHIVE)
+    if have == 0:
+        return images[:1]
+    return images if have < 2 else images[1:]
 schedules = []
 failed = []
 
@@ -45,7 +55,7 @@ class SmokeApp(gui.App):
     def do_activate(self):
         window = gui.Window(
             self,
-            fetch_latest=lambda market: bing.parse_archive(ARCHIVE),
+            fetch_page=fake_page,
             fetch_thumbnail=lambda image: None,
             apply=fake_apply,
             set_daily_time=lambda t: schedules.append(t) or "",
@@ -59,6 +69,8 @@ class SmokeApp(gui.App):
                 cards += 1
                 child = child.get_next_sibling()
             assert cards == 2, f"expected 2 gallery cards, got {cards}"
+            assert window.exhausted, "should have stopped once Bing had no more images"
+            assert pages[:2] == [0, 1], pages
             window.today_button.emit("clicked")
             window.when_dropdown.set_selected(1)
             window.hour_spin.set_value(6)

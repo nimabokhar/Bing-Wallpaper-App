@@ -77,6 +77,20 @@ class BingTest(unittest.TestCase):
         with mock.patch.object(bing, "http_get", fake_get):
             self.assertEqual(bing.download_image(image), JPEG)
 
+    def test_fetch_all_pages_through_two_weeks(self):
+        # Fake Bing with 15 days: idx is capped at 7 and n at 8, so pages overlap.
+        days = [bing.BingImage(f"img{d}", "", "", "", "", "", "", "") for d in range(15)]
+        calls = []
+
+        def fake_latest(market, count=8, start=0):
+            calls.append(start)
+            return days[min(start, 7):min(start, 7) + count]
+
+        with mock.patch.object(bing, "fetch_latest", fake_latest):
+            images = bing.fetch_all("en-US")
+        self.assertEqual([i.id for i in images], [d.id for d in days])
+        self.assertEqual(calls, [0, 7])
+
     def test_download_rejects_non_images(self):
         image = bing.parse_archive(ARCHIVE)[0]
         with mock.patch.object(bing, "http_get", lambda url, timeout=30: b"<html>"):
@@ -191,7 +205,7 @@ class UpdateTest(TempHome):
 
         result_type = desktop.Result
         for module, name, value in (
-            (bing, "fetch_latest", lambda market, count=8: bing.parse_archive(ARCHIVE)[:count]),
+            (bing, "fetch_latest", lambda market, count=8, start=0: bing.parse_archive(ARCHIVE)[start:start + count]),
             (desktop, "set_wallpaper", fake_set),
             (core, "download", self._download),
         ):

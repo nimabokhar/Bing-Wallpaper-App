@@ -176,7 +176,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("list", help="show the latest Bing images")
     p.set_defaults(func=cmd_list)
 
-    p = sub.add_parser("set", help="set one of the latest images (1 = today)")
+    p = sub.add_parser("set", help="set one of the latest images (1 = today, up to about 15)")
     p.add_argument("number", type=int, nargs="?", default=1)
     p.add_argument("--on", choices=desktop.TARGETS, default=desktop.BOTH,
                    help="desktop, lock screen, or both (default)")

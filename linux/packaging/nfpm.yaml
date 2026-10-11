@@ -13,7 +13,7 @@ description: |
   Sets your desktop and lock screen wallpaper to the Bing image of the day.
   Works with GNOME, KDE Plasma, Cinnamon, MATE, XFCE, LXQt, Sway and Hyprland,
   updates daily with a systemd user timer, and has a window to pick the Bing
-  region and any of the latest 8 images.
+  region and any image from the last two weeks.
 vendor: nimabokhar
 homepage: https://github.com/nimabokhar/Bing-Wallpaper-Android-App
 license: MIT

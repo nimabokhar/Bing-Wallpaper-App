@@ -4,7 +4,7 @@ Sets your desktop wallpaper and lock screen to the [Bing image of the day](https
 
 ## Features
 
-- **Latest images** shows the last 8 Bing images of the day. Click one to set it on the desktop, the lock screen, or both.
+- **Latest images** shows the Bing images of the day, newest first. Scroll down to load older ones, back as far as Bing keeps them (about two weeks). Click one to set it on the desktop, the lock screen, or both.
 - **Set today's image now** applies the newest image to the desktop and lock screen immediately.
 - **Update daily** (on by default) checks every 4 hours with a systemd user timer and switches the wallpaper as soon as Bing publishes a new image. It also checks at login. If you pick an older image by hand, it stays until the next new Bing image comes out.
 - **Schedule** picks when the daily change happens: as soon as Bing publishes a new image (the default), or every day at a time you choose, such as 07:00. If the computer is off at that time, it changes at the next login or startup.
@@ -68,7 +68,7 @@ Then open **Bing Wallpaper** from your app menu once (or log out and back in). D
 ```sh
 bing-wallpaper              # open the window
 bing-wallpaper update       # apply today's image if it's new (--force to re-apply)
-bing-wallpaper list         # the latest 8 images
+bing-wallpaper list         # every image Bing still has (about two weeks)
 bing-wallpaper set 3 --on lock   # image 3 on the lock screen (desktop, lock or both)
 bing-wallpaper region en-GB # or "auto"; --list shows all regions
 bing-wallpaper daily at 07:30  # change every day at 07:30 ("auto" = as soon as Bing publishes)
