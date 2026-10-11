@@ -25,9 +25,72 @@ Each platform is a separate app in its own folder, with its own build and its ow
 
 All builds are published to the same [**latest release**](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/tag/latest).
 
-## Versions
+## What the apps can do
 
-The apps are in **alpha**: they work, but expect rough edges and changes between builds.
+| | Android | Linux |
+| --- | --- | --- |
+| Sets the wallpaper | Home screen and lock screen | Desktop and lock screen |
+| Changes it every day | Yes, at a time you choose (7:00 by default) | Yes, as soon as Bing publishes a new image, or at a time you choose |
+| Keeps working after a restart | Yes | Yes (systemd user timer, also checks at login) |
+| Browse and pick older images | Scroll back through about two weeks of Bing images | Scroll back through about two weeks of Bing images |
+| Choose where a picked image goes | Home, lock or both | Desktop, lock or both |
+| Bing region (country) | 14 regions, or Automatic | 14 regions, or Automatic |
+| Image resolution | 4K (default), 1920×1080, 1366×768, portrait 1080×1920 | 4K (default) down to 1024×768, plus portrait 1080×1920 |
+| Dark mode | Follows the system, or Light or Dark | Not yet |
+| Command line | No | `bing-wallpaper` does everything the window does |
+
+### Android
+
+- **Home and lock screen:** the daily image goes on both. For any image you pick from the gallery, choose home, lock or both.
+- **Daily change at a set time:** the wallpaper changes once a day at the time you set under **Change at**. If Bing hasn't published the day's image yet, the app checks again hourly for a few hours. The schedule survives reboots.
+- **Gallery:** shows Bing's images newest first and loads older ones as you scroll, back to the roughly 15 days Bing keeps. A hand-picked image stays until the next scheduled change brings a newer one.
+- **Set today's image now** applies the newest image straight away.
+- **Bing region:** pick which country's image you get, or leave it on Automatic to follow your phone's language and region.
+- **Image resolution:** 4K/UHD (default), 1920×1080, 1366×768 or 1080×1920 portrait. The image is cropped to fit your screen.
+- **Dark mode:** follows your phone's theme, or pick Light or Dark.
+- **Foldables:** the image is cropped for the unfolded screen so it stays sharp on both screens, and the gallery shows more columns when unfolded.
+- **Themed icon:** on Android 13 and newer, the launcher icon follows your wallpaper colours.
+- The app shows its version at the bottom of the main screen.
+
+Requires Android 7.0 or newer. More detail in the [Android README](android/README.md).
+
+### Linux
+
+- **Desktop and lock screen:** works on GNOME, KDE Plasma 5 and 6, Cinnamon, MATE and Budgie, including their lock screens. XFCE, LXQt, LXDE, Sway, Hyprland and setups using `feh`, `nitrogen` or `swww` get the desktop wallpaper, plus an always-current `lock.jpg` you can point your screen locker at.
+- **Daily change:** as soon as Bing publishes a new image (the default), or every day at a time you choose. If the computer was off, it catches up at the next login.
+- **Gallery:** Bing's images newest first, loading older ones as you scroll. Click one to put it on the desktop, the lock screen or both.
+- **Bing region** and **image size** (4K UHD by default, down to 1024×768, plus portrait 1080×1920).
+- **Command line:** everything the window does also works from the terminal, for example `bing-wallpaper update`, `bing-wallpaper set 3 --on lock`, `bing-wallpaper daily at 07:30`.
+- **Custom setups:** any other wallpaper tool can be used through a `custom_command` in the settings file.
+- Packages for Debian and Ubuntu (.deb), Fedora (.rpm) and Arch (.pkg.tar.zst, or build from the PKGBUILD).
+
+More detail, including the full list of desktops and commands, in the [Linux README](linux/README.md).
+
+## Install
+
+> The apps are in **alpha**. They work, but expect rough edges and changes between builds. The links below are the newest build; each version also has its own pre-release on the [releases page](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases).
+
+### Android
+
+1. On your phone, download [`bing-wallpaper.apk`](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.apk).
+2. Open it, and allow your browser or file manager to install unknown apps when Android asks.
+3. Open **Bing Wallpaper** and tap **Set today's image now**. Daily changes run on their own from then on.
+
+Each new alpha build is signed with a fresh key until a signing key is set up, so you may need to uninstall the old version before installing a new one (see the [Android README](android/README.md#updating-without-uninstalling)). If daily changes stop, set the app's battery usage to Unrestricted (Settings → Apps → Bing Wallpaper → Battery).
+
+### Linux
+
+Download the package for your distro, then install it:
+
+| Distro | Download | Install |
+| --- | --- | --- |
+| Debian, Ubuntu, Mint | [bing-wallpaper.deb](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.deb) | `sudo apt install ./bing-wallpaper.deb` |
+| Fedora | [bing-wallpaper.rpm](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.rpm) | `sudo dnf install ./bing-wallpaper.rpm` |
+| Arch, Manjaro | [bing-wallpaper.pkg.tar.zst](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.pkg.tar.zst) | `sudo pacman -U ./bing-wallpaper.pkg.tar.zst` |
+
+Then open **Bing Wallpaper** from your app menu once (or log out and back in). Daily changes run on their own from then on.
+
+## Versions
 
 Every platform shares one version number, kept in [`VERSION`](VERSION) and following [semantic versioning](https://semver.org) with pre-release labels (`0.1.0-alpha.1`, then `-alpha.2`, `-beta.1`, `-rc.1`, and finally `0.1.0`). What changed in each version is in the [changelog](CHANGELOG.md).
 
@@ -37,33 +100,11 @@ Every platform shares one version number, kept in [`VERSION`](VERSION) and follo
 
 To cut a new version, add its notes under a new `## [<version>]` heading in `CHANGELOG.md`, put the version in `VERSION`, and merge to `main`.
 
-## Android
-
-- **Home and lock screen:** the daily image goes on both. For images you pick from the gallery, choose home, lock or both.
-- **Daily updates:** checks every few hours in the background and switches as soon as Bing publishes a new image. Keeps working after a reboot.
-- **Gallery:** browse the last 8 Bing images and tap one to use it. A hand-picked image stays until Bing publishes the next one.
-- **Region picker:** choose which country's Bing image you get (14 markets), or leave it on Automatic to follow your phone's language and region.
-- **Dark mode:** follows your phone's theme, or pick Light or Dark.
-- **Foldables:** the image is cropped for the unfolded screen so it stays sharp on both screens, and the gallery shows more columns when unfolded.
-- **Themed icon:** the launcher icon follows your wallpaper colours on Android 13+.
-
-Requires Android 7.0 or newer.
-
-### Install
-
-1. On your phone, download [`bing-wallpaper.apk`](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.apk) from the latest release.
-2. Open it, and allow your browser or file manager to install unknown apps when Android asks.
-3. Open **Bing Wallpaper** and tap **Set today's image now**. Daily updates run on their own from then on.
-
-If updates stop, set the app's battery usage to Unrestricted (Settings → Apps → Bing Wallpaper → Battery). Some phone makers stop background apps aggressively.
-
-The [Android README](android/README.md) covers updating without uninstalling (signing keys) and building from source.
-
 ## Repository layout
 
 ```
 android/            Android app (Kotlin, Gradle)
-linux/              Linux app (in progress)
+linux/              Linux app (Python, GTK 4) and its .deb, .rpm and Arch packaging
 icon/               App icon: SVG source plus PNG and ICO exports for every platform
 .github/workflows/  One CI workflow per platform, each only runs on changes to its folder
 ```
