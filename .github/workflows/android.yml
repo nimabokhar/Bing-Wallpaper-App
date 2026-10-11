@@ -1,9 +1,15 @@
-name: Build APK
+name: Android
 
 on:
   push:
     branches: [main]
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
   pull_request:
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
   workflow_dispatch:
 
 permissions:
@@ -12,6 +18,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
     steps:
       - uses: actions/checkout@v4
 
@@ -46,7 +55,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: bing-wallpaper-apk
-          path: bing-wallpaper.apk
+          path: android/bing-wallpaper.apk
 
       - name: Publish to the "latest" release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
