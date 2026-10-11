@@ -34,6 +34,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        // Folding or unfolding recreates the activity, so this sees every screen.
+        ScreenShapes.recordCurrent(this)
 
         gallery = findViewById(R.id.gallery)
         galleryMessage = findViewById(R.id.galleryMessage)
@@ -88,13 +90,16 @@ class MainActivity : ComponentActivity() {
             }
             galleryMessage.setText(R.string.gallery_hint)
 
-            // Two images per row.
-            val thumbs = images.chunked(2).flatMap { pair ->
+            // More columns on wide windows, such as an unfolded foldable or a tablet.
+            val columns = (resources.configuration.screenWidthDp / 180).coerceIn(2, 5)
+            val thumbs = images.chunked(columns).flatMap { group ->
                 val row = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL }
                 gallery.addView(row)
-                val views = pair.map { image -> addItem(row, image) }
-                // Keep an odd last image at half width.
-                if (pair.size == 1) row.addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 0, 1f))
+                val views = group.map { image -> addItem(row, image) }
+                // Keep a short last row's images the same width as the others.
+                repeat(columns - group.size) {
+                    row.addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 0, 1f))
+                }
                 views
             }
 

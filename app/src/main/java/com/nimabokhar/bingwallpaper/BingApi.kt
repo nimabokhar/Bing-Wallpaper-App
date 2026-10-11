@@ -15,7 +15,9 @@ data class BingImage(
     val copyright: String,
     /** Day the image was Bing's image of the day, as yyyyMMdd. */
     val startDate: String,
-    /** Portrait image sized for phones. */
+    /** Full-resolution 3840x2160 image, so it can be cropped for any screen shape. */
+    val uhdUrl: String,
+    /** Portrait image sized for phones, used if UHD fails. */
     val portraitUrl: String,
     /** Landscape image Bing shows on its home page, used if portrait fails. */
     val fallbackUrl: String,
@@ -68,6 +70,7 @@ object BingApi {
                 title = image.optString("title"),
                 copyright = image.optString("copyright"),
                 startDate = image.optString("startdate"),
+                uhdUrl = "$BASE${urlBase}_UHD.jpg",
                 portraitUrl = "$BASE${urlBase}_1080x1920.jpg",
                 fallbackUrl = BASE + image.getString("url"),
                 thumbnailUrl = "$BASE${urlBase}_480x800.jpg",
@@ -81,7 +84,7 @@ object BingApi {
     }.getOrNull()
 
     fun downloadBitmap(image: BingImage): Bitmap {
-        for (url in listOf(image.portraitUrl, image.fallbackUrl)) {
+        for (url in listOf(image.uhdUrl, image.portraitUrl, image.fallbackUrl)) {
             val bytes = runCatching { httpGet(url) }.getOrNull() ?: continue
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.let { return it }
         }

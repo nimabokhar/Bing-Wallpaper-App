@@ -60,12 +60,13 @@ object WallpaperSetter {
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** Crop hint that keeps the centre of the image at the screen's aspect ratio. */
+    /**
+     * Crop hint that keeps the centre of the image at the shape of the widest
+     * screen the device has (the inner screen on a foldable). Narrower screens
+     * are centre-cropped further by the system.
+     */
     private fun centerCropFor(context: Context, bitmap: Bitmap): Rect {
-        val metrics = context.resources.displayMetrics
-        val screenW = minOf(metrics.widthPixels, metrics.heightPixels).toFloat()
-        val screenH = maxOf(metrics.widthPixels, metrics.heightPixels).toFloat()
-        val screenRatio = screenW / screenH
+        val screenRatio = ScreenShapes.widestRatio(context).takeIf { it > 0f } ?: (9f / 16f)
         val imageRatio = bitmap.width.toFloat() / bitmap.height
 
         return if (imageRatio > screenRatio) {
