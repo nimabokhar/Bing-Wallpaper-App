@@ -19,7 +19,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install GTK 4 for the window test
         run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gtk-4.0 xvfb
       - name: Unit tests
@@ -32,8 +32,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: stable
           cache: false
@@ -45,7 +45,7 @@ jobs:
           cp dist/*.deb dist/bing-wallpaper.deb
           cp dist/*.rpm dist/bing-wallpaper.rpm
           cp dist/*.pkg.tar.zst dist/bing-wallpaper.pkg.tar.zst
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: bing-wallpaper-linux
           path: linux/dist/
@@ -71,7 +71,7 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: bing-wallpaper-linux
       - name: Install on ${{ matrix.distro }}
@@ -94,7 +94,7 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check the AUR PKGBUILD
         run: |
           pacman -Syu --noconfirm base-devel git
@@ -112,8 +112,8 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v6
         with:
           name: bing-wallpaper-linux
           path: dist
