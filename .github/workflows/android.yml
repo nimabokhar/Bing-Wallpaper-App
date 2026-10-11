@@ -107,6 +107,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
+      # The emulator needs several GB; the runner's preinstalled toolchains we don't use take it.
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost "$AGENT_TOOLSDIRECTORY/CodeQL"
+
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -119,6 +123,8 @@ jobs:
           api-level: 34
           arch: x86_64
           target: google_apis
+          cores: 4
+          disk-size: 2048M
           disable-animations: true
           working-directory: android
           script: |
