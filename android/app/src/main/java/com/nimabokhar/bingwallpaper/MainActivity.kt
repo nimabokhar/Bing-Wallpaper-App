@@ -82,8 +82,9 @@ class MainActivity : AppCompatActivity() {
         statusScrim = findViewById(R.id.statusScrim)
         header = layoutInflater.inflate(R.layout.gallery_header, gallery, false)
 
-        // More columns on wide windows, such as an unfolded foldable or a tablet.
-        val columns = (resources.configuration.screenWidthDp / 180).coerceIn(2, 5)
+        // Big landscape cards: one per row on a phone, more on wide windows such as
+        // an unfolded foldable or a tablet.
+        val columns = (resources.configuration.screenWidthDp / 360).coerceIn(1, 4)
         val spacing = resources.getDimensionPixelSize(R.dimen.grid_spacing)
         val screenWidth = resources.displayMetrics.widthPixels
         val thumbWidth = (screenWidth - spacing * (columns + 1)) / columns

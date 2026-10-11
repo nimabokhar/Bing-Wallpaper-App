@@ -13,7 +13,7 @@ Sets your phone's home screen and lock screen wallpaper to the [Bing image of th
   - **Theme:** follows your phone's light or dark mode by default, or pick Light or Dark.
 - **Material You:** on Android 12 and newer the app's colours come from your wallpaper, so they change with each day's image.
 - **Smooth scrolling:** images are downloaded once and kept on disk (old ones are cleared after a month), decoded at the size they're shown on a background thread, and drawn as GPU bitmaps, so the main thread never waits on an image.
-- **Foldable phones:** the wallpaper is cropped for the inner (unfolded) screen, and Android centre-crops it for the narrower cover screen, so it looks right and stays sharp on both. The gallery shows more columns when the phone is unfolded.
+- **Foldable phones:** the wallpaper is cropped for the inner (unfolded) screen, and Android centre-crops it for the narrower cover screen, so it looks right and stays sharp on both. The gallery shows its wide image cards side by side when the phone is unfolded.
 
 Requires Android 7.0 (API 24) or newer.
 

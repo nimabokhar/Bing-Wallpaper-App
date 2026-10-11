@@ -19,7 +19,7 @@ data class BingImage(
     val urlBase: String,
     /** Landscape image Bing shows on its home page, used if the chosen size fails. */
     val fallbackUrl: String,
-    /** Small portrait version for the gallery; see [ImageLoader]. */
+    /** Landscape preview for the gallery cards; see [ImageLoader]. */
     val thumbnailUrl: String,
 )
 
@@ -81,7 +81,7 @@ object BingApi {
                 startDate = image.optString("startdate"),
                 urlBase = BASE + urlBase,
                 fallbackUrl = BASE + image.getString("url"),
-                thumbnailUrl = "$BASE${urlBase}_480x800.jpg",
+                thumbnailUrl = "$BASE${urlBase}_1366x768.jpg",
             )
         }
     }

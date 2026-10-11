@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.roundToInt
 
 /**
- * A gallery cell: rounded corners and a fixed portrait shape, so its height
+ * A gallery cell: rounded corners and a fixed landscape shape, so its height
  * comes from its width alone and loading an image never resizes it. The corners
  * are clipped with an outline, which the GPU does for free.
  */
@@ -30,8 +30,8 @@ class ThumbnailFrame @JvmOverloads constructor(context: Context, attrs: Attribut
     }
 
     companion object {
-        /** Height / width of a cell; Bing's portrait thumbnails are 480 x 800. */
-        const val HEIGHT_RATIO = 1.45f
+        /** Height / width of a cell: 16:9, the shape of Bing's images. */
+        const val HEIGHT_RATIO = 9f / 16f
     }
 }
 

@@ -49,7 +49,7 @@ All builds are published to the same [**latest release**](https://github.com/nim
 - **Image resolution:** 4K/UHD (default), 1920×1080, 1366×768 or 1080×1920 portrait. The image is cropped to fit your screen.
 - **Dark mode:** follows your phone's theme, or pick Light or Dark.
 - **Material You design:** on Android 12 and newer the app's colours follow your wallpaper. Region, resolution and theme live in the Settings sheet behind the gear icon.
-- **Foldables:** the image is cropped for the unfolded screen so it stays sharp on both screens, and the gallery shows more columns when unfolded.
+- **Foldables:** the image is cropped for the unfolded screen so it stays sharp on both screens, and the gallery shows its wide image cards side by side when unfolded.
 - **Themed icon:** on Android 13 and newer, the launcher icon follows your wallpaper colours.
 - The app shows its version in Settings.
 
