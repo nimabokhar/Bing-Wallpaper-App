@@ -35,7 +35,7 @@ WHEN_OPTIONS = ["As soon as Bing publishes", "At a set time"]
 #: Gallery cards are wide, at the wallpaper's 16:9 shape, and always this size so
 #: loading an image never changes the layout.
 CARD_WIDTH, CARD_HEIGHT = 400, 225
-CARD_IMAGE = "1280x720"
+CARD_IMAGE = "1366x768"
 #: The hero is decoded at this width; GTK scales it the rest of the way.
 HERO_DECODE_WIDTH = 1600
 FADE_MS = 180
@@ -196,7 +196,7 @@ class Window(Adw.ApplicationWindow):
             selection_mode=Gtk.SelectionMode.NONE,
             homogeneous=True,
             min_children_per_line=1,
-            max_children_per_line=4,
+            max_children_per_line=3,
             row_spacing=14,
             column_spacing=14,
             valign=Gtk.Align.START,
