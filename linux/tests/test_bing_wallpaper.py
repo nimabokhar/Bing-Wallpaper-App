@@ -77,6 +77,37 @@ class BingTest(unittest.TestCase):
         with mock.patch.object(bing, "http_get", fake_get):
             self.assertEqual(bing.download_image(image), JPEG)
 
+    def test_fetch_all_pages_through_two_weeks(self):
+        # Fake Bing with 15 days: idx is capped at 7 and n at 8, so pages overlap.
+        days = [bing.BingImage(f"img{d}", "", "", "", "", "", "", "") for d in range(15)]
+        calls = []
+
+        def fake_latest(market, count=8, start=0):
+            calls.append(start)
+            return days[min(start, 7):min(start, 7) + count]
+
+        with mock.patch.object(bing, "fetch_latest", fake_latest):
+            images = bing.fetch_all("en-US")
+        self.assertEqual([i.id for i in images], [d.id for d in days])
+        self.assertEqual(calls, [0, 7])
+
+    def test_download_in_chosen_resolution(self):
+        image = bing.parse_archive(ARCHIVE)[0]
+        asked = []
+
+        def fake_get(url, timeout=30):
+            asked.append(url)
+            if "_1366x768" in url:
+                raise OSError("404")
+            return JPEG
+
+        with mock.patch.object(bing, "http_get", fake_get):
+            bing.download_image(image, "1280x720")
+            bing.download_image(image, "1366x768")
+        self.assertEqual(asked[0], "https://www.bing.com/th?id=OHR.Today_EN-US123_1280x720.jpg")
+        # A missing size falls back to Full HD.
+        self.assertEqual(asked[2], image.hd_url)
+
     def test_download_rejects_non_images(self):
         image = bing.parse_archive(ARCHIVE)[0]
         with mock.patch.object(bing, "http_get", lambda url, timeout=30: b"<html>"):
@@ -184,6 +215,7 @@ class UpdateTest(TempHome):
     def setUp(self):
         super().setUp()
         self.applied = []
+        self.resolutions = []
 
         def fake_set(path, target, desktop=None, custom_command=None):
             self.applied.append((Path(path).name, target))
@@ -191,7 +223,7 @@ class UpdateTest(TempHome):
 
         result_type = desktop.Result
         for module, name, value in (
-            (bing, "fetch_latest", lambda market, count=8: bing.parse_archive(ARCHIVE)[:count]),
+            (bing, "fetch_latest", lambda market, count=8, start=0: bing.parse_archive(ARCHIVE)[start:start + count]),
             (desktop, "set_wallpaper", fake_set),
             (core, "download", self._download),
         ):
@@ -199,8 +231,9 @@ class UpdateTest(TempHome):
             p.start()
             self.addCleanup(p.stop)
 
-    def _download(self, image):
-        path = core.image_path(image)
+    def _download(self, image, resolution="UHD"):
+        self.resolutions.append(resolution)
+        path = core.image_path(image, resolution)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(JPEG)
         return path
@@ -232,6 +265,15 @@ class UpdateTest(TempHome):
             self.assertEqual(core.current_desktop(state), "kde")
         with mock.patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": ""}):
             self.assertEqual(core.current_desktop(settings.State()), "kde")
+
+    def test_resolution_setting(self):
+        with mock.patch("sys.stdout"):
+            self.assertEqual(cli.main(["resolution", "1920x1080"]), 0)
+            self.assertEqual(cli.main(["set", "1"]), 0)
+            with mock.patch("sys.stderr"):
+                self.assertEqual(cli.main(["resolution", "123x45"]), 2)
+        self.assertEqual(self.resolutions, ["1920x1080"])
+        self.assertEqual(self.applied, [("OHR.Today_EN-US123_1920x1080.jpg", "both")])
 
     def test_region_setting(self):
         cfg = settings.Settings()

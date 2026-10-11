@@ -26,7 +26,7 @@ jobs:
       run:
         working-directory: android
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # A push to main whose VERSION has no release yet becomes that release.
       # Every other build is a snapshot and gets the run number as build metadata.
@@ -42,12 +42,12 @@ jobs:
             echo "kind=snapshot" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       - name: Decode signing key
         env:
@@ -71,7 +71,7 @@ jobs:
           ./gradlew --no-daemon assembleRelease
           cp app/build/outputs/apk/release/app-release.apk bing-wallpaper.apk
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: bing-wallpaper-apk
           path: android/bing-wallpaper.apk

@@ -14,8 +14,10 @@ from . import __version__
 BASE = "https://www.bing.com"
 DEFAULT_MARKET = "en-US"
 
-#: Bing's archive only goes back this many days.
+#: Images per request; Bing returns at most 8.
 MAX_IMAGES = 8
+#: Bing's feed reaches back about two weeks: idx (days back) stops at 7, n at 8.
+MAX_IDX = 7
 
 #: Markets Bing publishes an image of the day for, with display names.
 MARKETS = [
@@ -34,6 +36,18 @@ MARKETS = [
     ("ja-JP", "Japan"),
     ("zh-CN", "China"),
 ]
+
+#: Sizes Bing serves every image of the day in, largest first, with labels.
+RESOLUTIONS = [
+    ("UHD", "4K UHD (3840×2160)"),
+    ("1920x1200", "1920×1200"),
+    ("1920x1080", "Full HD (1920×1080)"),
+    ("1366x768", "1366×768"),
+    ("1280x720", "HD (1280×720)"),
+    ("1024x768", "1024×768"),
+    ("1080x1920", "Portrait (1080×1920)"),
+]
+DEFAULT_RESOLUTION = "UHD"
 
 USER_AGENT = f"Mozilla/5.0 (X11; Linux x86_64) BingWallpaper/{__version__}"
 
@@ -54,6 +68,13 @@ class BingImage:
     fallback_url: str
     #: Small landscape version for the gallery.
     thumbnail_url: str
+    #: Bing's path prefix for this image's sizes, e.g. "/th?id=OHR.SomePlace_EN-US123".
+    url_base: str = ""
+
+    def url_for(self, resolution: str) -> str:
+        if not self.url_base:
+            return self.uhd_url
+        return f"{BASE}{self.url_base}_{resolution}.jpg"
 
     @property
     def nice_date(self) -> str:
@@ -96,15 +117,36 @@ def parse_archive(data: dict) -> List[BingImage]:
                 hd_url=f"{BASE}{url_base}_1920x1080.jpg",
                 fallback_url=BASE + image["url"],
                 thumbnail_url=f"{BASE}{url_base}_640x360.jpg",
+                url_base=url_base,
             )
         )
     return images
 
 
-def fetch_latest(market: str, count: int = MAX_IMAGES) -> List[BingImage]:
-    """The latest images, newest first."""
-    url = f"{BASE}/HPImageArchive.aspx?format=js&idx=0&n={count}&mkt={market}"
+def fetch_latest(market: str, count: int = MAX_IMAGES, start: int = 0) -> List[BingImage]:
+    """Up to `count` (at most 8) images, newest first, starting `start` days back."""
+    url = f"{BASE}/HPImageArchive.aspx?format=js&idx={start}&n={count}&mkt={market}"
     return parse_archive(json.loads(http_get(url).decode("utf-8")))
+
+
+def fetch_page(market: str, have: int) -> List[BingImage]:
+    """The next images for a gallery that already shows `have` of them, newest first.
+    Bing can't start further back than MAX_IDX days, so pages overlap and callers drop
+    images they already have; an empty result (after that) means there are no more."""
+    if have >= MAX_IDX + MAX_IMAGES:
+        return []
+    return fetch_latest(market, MAX_IMAGES, min(have, MAX_IDX))
+
+
+def fetch_all(market: str) -> List[BingImage]:
+    """Every image Bing still has (about two weeks), newest first."""
+    images: List[BingImage] = []
+    while True:
+        seen = {i.id for i in images}
+        new = [i for i in fetch_page(market, len(images)) if i.id not in seen]
+        if not new:
+            return images
+        images += new
 
 
 def http_get(url: str, timeout: float = 30) -> bytes:
@@ -117,8 +159,18 @@ def looks_like_jpeg(data: bytes) -> bool:
     return data[:3] == b"\xff\xd8\xff"
 
 
-def download_image(image: BingImage) -> bytes:
-    for url in (image.uhd_url, image.hd_url, image.fallback_url):
+def resolution_name(resolution: str) -> str:
+    return dict(RESOLUTIONS).get(resolution, resolution)
+
+
+def download_image(image: BingImage, resolution: str = DEFAULT_RESOLUTION) -> bytes:
+    """The image in `resolution`, falling back to Full HD, UHD and then whatever Bing
+    shows on its home page if that size isn't available."""
+    urls = []
+    for url in (image.url_for(resolution), image.hd_url, image.uhd_url, image.fallback_url):
+        if url not in urls:
+            urls.append(url)
+    for url in urls:
         try:
             data = http_get(url)
         except OSError:

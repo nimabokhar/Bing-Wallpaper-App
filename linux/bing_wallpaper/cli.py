@@ -85,6 +85,27 @@ def _when(cfg: settings.Settings) -> str:
     return f"at {t}" if t else "as soon as Bing publishes a new image"
 
 
+def cmd_resolution(args: argparse.Namespace) -> int:
+    cfg = settings.Settings()
+    if args.list:
+        for code, name in bing.RESOLUTIONS:
+            print(f"{code:10} {name}")
+        return 0
+    if args.size is None:
+        print(bing.resolution_name(cfg.get("resolution")))
+        return 0
+    match = [c for c, _ in bing.RESOLUTIONS if c.lower() == args.size.lower().replace("×", "x")]
+    if args.size.lower() in ("4k", "uhd"):
+        match = ["UHD"]
+    if not match:
+        print(f"Unknown size {args.size}. See `bing-wallpaper resolution --list`.", file=sys.stderr)
+        return 2
+    cfg.set("resolution", match[0])
+    print(f"Image size set to {bing.resolution_name(match[0])}. It's used from the next "
+          "wallpaper change; run `bing-wallpaper set 1` to apply today's image in it now.")
+    return 0
+
+
 def cmd_daily(args: argparse.Namespace) -> int:
     cfg = settings.Settings()
     if args.state is None:
@@ -125,6 +146,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     daily_on = cfg.get("daily") and schedule.enabled()
     print(f"Daily updates:  {'on, ' + _when(cfg) if daily_on else 'off'}")
     print(f"Current image:  {state.get('last_title') or state.get('last_applied') or 'none yet'}")
+    print(f"Image size:     {bing.resolution_name(cfg.get('resolution'))}")
     print(f"Images folder:  {settings.data_dir()}")
     return 0
 
@@ -176,7 +198,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("list", help="show the latest Bing images")
     p.set_defaults(func=cmd_list)
 
-    p = sub.add_parser("set", help="set one of the latest images (1 = today)")
+    p = sub.add_parser("set", help="set one of the latest images (1 = today, up to about 15)")
     p.add_argument("number", type=int, nargs="?", default=1)
     p.add_argument("--on", choices=desktop.TARGETS, default=desktop.BOTH,
                    help="desktop, lock screen, or both (default)")
@@ -186,6 +208,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("code", nargs="?")
     p.add_argument("--list", action="store_true", help="list the regions")
     p.set_defaults(func=cmd_region)
+
+    p = sub.add_parser("resolution", help="show or set the image size (UHD, 1920x1080, ...)")
+    p.add_argument("size", nargs="?")
+    p.add_argument("--list", action="store_true", help="list the sizes")
+    p.set_defaults(func=cmd_resolution)
 
     p = sub.add_parser("daily", help="turn daily updates on or off, or set their time: daily at 07:30")
     p.add_argument("state", nargs="?", choices=("on", "off", "at"))
