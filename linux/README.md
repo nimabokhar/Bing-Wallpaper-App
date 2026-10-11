@@ -9,7 +9,7 @@ Sets your desktop wallpaper and lock screen to the [Bing image of the day](https
 - **Update daily** (on by default) checks every 4 hours with a systemd user timer and switches the wallpaper as soon as Bing publishes a new image. It also checks at login. If you pick an older image by hand, it stays until the next new Bing image comes out.
 - **Schedule** picks when the daily change happens: as soon as Bing publishes a new image (the default), or every day at a time you choose, such as 07:00. If the computer is off at that time, it changes at the next login or startup.
 - **Bing region** picks which country's image you get. The default follows your system language (falling back to United States).
-- Downloads the full-resolution (UHD, 3840×2160) image, so it stays sharp on 4K and multi-monitor setups.
+- **Image size** picks the resolution to download: 4K UHD (3840×2160, the default, sharp on 4K and multi-monitor setups), 1920×1200, Full HD, 1366×768, 1280×720, 1024×768 or portrait 1080×1920. If Bing doesn't have an image in that size, Full HD is used.
 - Everything also works from the terminal: `bing-wallpaper --help`.
 
 ## Supported desktops
@@ -71,6 +71,7 @@ bing-wallpaper update       # apply today's image if it's new (--force to re-app
 bing-wallpaper list         # every image Bing still has (about two weeks)
 bing-wallpaper set 3 --on lock   # image 3 on the lock screen (desktop, lock or both)
 bing-wallpaper region en-GB # or "auto"; --list shows all regions
+bing-wallpaper resolution 1920x1080  # image size; --list shows all sizes
 bing-wallpaper daily at 07:30  # change every day at 07:30 ("auto" = as soon as Bing publishes)
 bing-wallpaper daily off    # stop daily updates
 bing-wallpaper status

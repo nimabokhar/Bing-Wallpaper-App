@@ -115,6 +115,16 @@ class Window(Gtk.ApplicationWindow):
         self.region_dropdown.set_selected(self.market_codes.index(chosen) if chosen in self.market_codes else 0)
         self.region_dropdown.connect("notify::selected", self.on_region)
         region.append(self.region_dropdown)
+
+        region.append(Gtk.Label(label="Image size", margin_start=12))
+        self.resolution_codes = [c for c, _ in bing.RESOLUTIONS]
+        self.resolution_dropdown = Gtk.DropDown.new_from_strings([n for _, n in bing.RESOLUTIONS])
+        current = self.cfg.get("resolution")
+        self.resolution_dropdown.set_selected(
+            self.resolution_codes.index(current) if current in self.resolution_codes else 0
+        )
+        self.resolution_dropdown.connect("notify::selected", self.on_resolution)
+        region.append(self.resolution_dropdown)
         outer.append(region)
 
         heading = Gtk.Label(label="Latest images", xalign=0)
@@ -329,6 +339,16 @@ class Window(Gtk.ApplicationWindow):
 
         _in_background(lambda: self.set_daily_time(daily_time), done)
         return False
+
+    def on_resolution(self, dropdown: Gtk.DropDown, _pspec: object) -> None:
+        code = self.resolution_codes[dropdown.get_selected()]
+        if code == self.cfg.get("resolution"):
+            return
+        self.cfg.set("resolution", code)
+        self.set_status(
+            f"Image size: {bing.resolution_name(code)}. It's used from the next wallpaper change, "
+            "or click an image to apply it in this size now."
+        )
 
     def on_region(self, dropdown: Gtk.DropDown, _pspec: object) -> None:
         code = self.market_codes[dropdown.get_selected()]

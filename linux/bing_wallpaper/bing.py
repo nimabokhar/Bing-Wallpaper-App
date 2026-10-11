@@ -37,6 +37,18 @@ MARKETS = [
     ("zh-CN", "China"),
 ]
 
+#: Sizes Bing serves every image of the day in, largest first, with labels.
+RESOLUTIONS = [
+    ("UHD", "4K UHD (3840×2160)"),
+    ("1920x1200", "1920×1200"),
+    ("1920x1080", "Full HD (1920×1080)"),
+    ("1366x768", "1366×768"),
+    ("1280x720", "HD (1280×720)"),
+    ("1024x768", "1024×768"),
+    ("1080x1920", "Portrait (1080×1920)"),
+]
+DEFAULT_RESOLUTION = "UHD"
+
 USER_AGENT = f"Mozilla/5.0 (X11; Linux x86_64) BingWallpaper/{__version__}"
 
 
@@ -56,6 +68,13 @@ class BingImage:
     fallback_url: str
     #: Small landscape version for the gallery.
     thumbnail_url: str
+    #: Bing's path prefix for this image's sizes, e.g. "/th?id=OHR.SomePlace_EN-US123".
+    url_base: str = ""
+
+    def url_for(self, resolution: str) -> str:
+        if not self.url_base:
+            return self.uhd_url
+        return f"{BASE}{self.url_base}_{resolution}.jpg"
 
     @property
     def nice_date(self) -> str:
@@ -98,6 +117,7 @@ def parse_archive(data: dict) -> List[BingImage]:
                 hd_url=f"{BASE}{url_base}_1920x1080.jpg",
                 fallback_url=BASE + image["url"],
                 thumbnail_url=f"{BASE}{url_base}_640x360.jpg",
+                url_base=url_base,
             )
         )
     return images
@@ -139,8 +159,18 @@ def looks_like_jpeg(data: bytes) -> bool:
     return data[:3] == b"\xff\xd8\xff"
 
 
-def download_image(image: BingImage) -> bytes:
-    for url in (image.uhd_url, image.hd_url, image.fallback_url):
+def resolution_name(resolution: str) -> str:
+    return dict(RESOLUTIONS).get(resolution, resolution)
+
+
+def download_image(image: BingImage, resolution: str = DEFAULT_RESOLUTION) -> bytes:
+    """The image in `resolution`, falling back to Full HD, UHD and then whatever Bing
+    shows on its home page if that size isn't available."""
+    urls = []
+    for url in (image.url_for(resolution), image.hd_url, image.uhd_url, image.fallback_url):
+        if url not in urls:
+            urls.append(url)
+    for url in urls:
         try:
             data = http_get(url)
         except OSError:

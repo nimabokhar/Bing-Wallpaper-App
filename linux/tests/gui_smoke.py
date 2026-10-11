@@ -82,6 +82,8 @@ class SmokeApp(gui.App):
             assert applied == [("OHR.Today_EN-US123", "both", "OHR.Today_EN-US123")], applied
             assert schedules == ["06:45"], schedules
             assert window.hour_spin.get_text() == "06", window.hour_spin.get_text()
+            window.resolution_dropdown.set_selected(2)
+            assert window.cfg.get("resolution") == "1920x1080", window.cfg.get("resolution")
             window.region_dropdown.set_selected(3)
             print("GUI smoke test passed:", window.status.get_text())
             self.quit()

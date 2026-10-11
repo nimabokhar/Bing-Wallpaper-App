@@ -13,19 +13,26 @@ from . import bing, desktop, schedule, settings
 KEEP_IMAGES = 12
 
 
-def image_path(image: bing.BingImage) -> Path:
+def image_path(image: bing.BingImage, resolution: str = bing.DEFAULT_RESOLUTION) -> Path:
     safe = "".join(c if c.isalnum() or c in "._-" else "_" for c in image.id)
-    if not safe.lower().endswith(".jpg"):
-        safe += ".jpg"
+    if safe.lower().endswith(".jpg"):
+        safe = safe[:-4]
+    if resolution != bing.DEFAULT_RESOLUTION:
+        safe += f"_{resolution}"
+    safe += ".jpg"
     return settings.data_dir() / "images" / safe
 
 
-def download(image: bing.BingImage, fetch: Callable[[bing.BingImage], bytes] = bing.download_image) -> Path:
-    """The image on disk, downloading it if needed."""
-    path = image_path(image)
+def download(
+    image: bing.BingImage,
+    resolution: str = bing.DEFAULT_RESOLUTION,
+    fetch: Callable[..., bytes] = bing.download_image,
+) -> Path:
+    """The image on disk in `resolution`, downloading it if needed."""
+    path = image_path(image, resolution)
     if path.exists() and path.stat().st_size > 0:
         return path
-    data = fetch(image)
+    data = fetch(image, resolution)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".part")
     tmp.write_bytes(data)
@@ -98,7 +105,7 @@ def apply(
     applying an older one by hand, so the daily update keeps it until a new image comes out."""
     cfg = cfg or settings.Settings()
     state = state or settings.State()
-    path = download(image)
+    path = download(image, cfg.get("resolution") or bing.DEFAULT_RESOLUTION)
     result = desktop.set_wallpaper(
         path,
         target,
