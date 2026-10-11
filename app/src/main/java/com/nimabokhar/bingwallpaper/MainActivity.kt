@@ -1,6 +1,8 @@
 package com.nimabokhar.bingwallpaper
 
 import android.app.AlertDialog
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.View
@@ -31,6 +33,20 @@ class MainActivity : ComponentActivity() {
     private var galleryJob: Job? = null
     private var settingWallpaper = false
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase)
+        // Force light or dark resources when the user overrides the system theme.
+        val night = when (Settings.themeMode(newBase)) {
+            ThemeMode.SYSTEM -> return
+            ThemeMode.LIGHT -> Configuration.UI_MODE_NIGHT_NO
+            ThemeMode.DARK -> Configuration.UI_MODE_NIGHT_YES
+        }
+        val uiMode = newBase.resources.configuration.uiMode
+        applyOverrideConfiguration(Configuration().apply {
+            this.uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or night
+        })
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -49,6 +65,7 @@ class MainActivity : ComponentActivity() {
         setNow.setOnClickListener { setTodayNow() }
 
         setUpRegionPicker()
+        setUpThemePicker()
         showLastApplied()
         loadGallery()
     }
@@ -71,6 +88,23 @@ class MainActivity : ComponentActivity() {
                 if (market == Settings.chosenMarket(this@MainActivity)) return
                 Settings.setChosenMarket(this@MainActivity, market)
                 loadGallery()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+    }
+
+    private fun setUpThemePicker() {
+        val labels = listOf(R.string.theme_system, R.string.theme_light, R.string.theme_dark).map(::getString)
+        val spinner = findViewById<Spinner>(R.id.themeSpinner)
+        spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
+        spinner.setSelection(Settings.themeMode(this).ordinal, false)
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val mode = ThemeMode.entries[position]
+                if (mode == Settings.themeMode(this@MainActivity)) return
+                Settings.setThemeMode(this@MainActivity, mode)
+                recreate()
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
