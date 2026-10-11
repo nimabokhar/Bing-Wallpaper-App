@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="16" height="16">
+  <!-- Single-colour version for themed icons (Android 13 monochrome, Linux symbolic). -->
+  <circle cx="54" cy="46" r="8" fill="#000"/>
+  <path fill="#000" d="M31,76 L44,60 L52,68 L63,56 L77,76 Z"/>
+</svg>
