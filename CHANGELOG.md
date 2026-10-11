@@ -23,6 +23,9 @@ A new look for the Android app, a scrolling gallery and resolution choice on And
 - First Linux version for Fedora, Arch and Debian (.rpm, Arch package and .deb): sets the desktop and lock screen on GNOME, KDE Plasma, Cinnamon, MATE and Budgie, and the desktop on XFCE, LXQt, Sway and Hyprland. Daily updates at a time you choose or as soon as Bing publishes, region picker, and a `bing-wallpaper` command.
 - The gallery loads older images as you scroll, back through every image Bing still has (about two weeks).
 - Choose the image size, from 4K UHD (default) down to 1024×768, or portrait.
+- New modern look built with libadwaita: today's image fills the top of the window with a Set as wallpaper button, recent images show as large wide previews, and region, image size, theme (System, Light or Dark) and the version are in a Settings dialog. Feedback appears as small pop-up notices.
+- Faster and smoother: images download in the background (at most 4 at once, never twice), are decoded at the size they're shown, and are cached on disk so reopening the window is instant. Unused cached images are deleted after 30 days.
+- The packages now also depend on libadwaita.
 
 ### Build
 
