@@ -1,0 +1,8 @@
+[Unit]
+Description=Set the Bing image of the day as wallpaper
+Documentation=https://github.com/nimabokhar/Bing-Wallpaper-Android-App/tree/main/linux
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bing-wallpaper update --quiet

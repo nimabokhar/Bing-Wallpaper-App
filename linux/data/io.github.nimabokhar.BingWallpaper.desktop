@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Bing Wallpaper
+Comment=Set the Bing image of the day as your wallpaper and lock screen
+Exec=bing-wallpaper gui
+Icon=io.github.nimabokhar.BingWallpaper
+Terminal=false
+Categories=Utility;GTK;
+Keywords=wallpaper;background;bing;lock screen;
+StartupNotify=true

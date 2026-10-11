@@ -1,0 +1,50 @@
+# Builds the .deb, .rpm and Arch packages from the tree `make install` stages in build/root.
+name: bing-wallpaper
+arch: all
+platform: linux
+version: ${VERSION}
+release: 1
+section: graphics
+priority: optional
+maintainer: Nima Bokhar <nimabokhar@users.noreply.github.com>
+description: |
+  Sets your desktop and lock screen wallpaper to the Bing image of the day.
+  Works with GNOME, KDE Plasma, Cinnamon, MATE, XFCE, LXQt, Sway and Hyprland,
+  updates daily with a systemd user timer, and has a window to pick the Bing
+  region and any of the latest 8 images.
+vendor: nimabokhar
+homepage: https://github.com/nimabokhar/Bing-Wallpaper-Android-App
+license: MIT
+
+contents:
+  - src: build/root/usr/
+    dst: /usr/
+    type: tree
+  - src: build/root/etc/xdg/autostart/bing-wallpaper-autostart.desktop
+    dst: /etc/xdg/autostart/bing-wallpaper-autostart.desktop
+    type: config
+
+overrides:
+  deb:
+    depends:
+      - python3 (>= 3.8)
+    recommends:
+      - python3-gi
+      - gir1.2-gtk-4.0
+  rpm:
+    depends:
+      - python3 >= 3.8
+    recommends:
+      - python3-gobject
+      - gtk4
+  archlinux:
+    depends:
+      - python
+      - python-gobject
+      - gtk4
+
+archlinux:
+  packager: Nima Bokhar <nimabokhar@users.noreply.github.com>
+
+rpm:
+  group: Applications/Multimedia
