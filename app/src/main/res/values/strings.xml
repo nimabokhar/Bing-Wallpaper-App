@@ -4,6 +4,10 @@
     <string name="daily_updates">Update daily (home and lock screen)</string>
     <string name="region">Bing region</string>
     <string name="region_automatic">Automatic (%1$s)</string>
+    <string name="theme">Theme</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
     <string name="latest_images">Latest images</string>
     <string name="gallery_hint">Tap an image to set it as your wallpaper.</string>
     <string name="loading">Loading images…</string>
