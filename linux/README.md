@@ -7,6 +7,7 @@ Sets your desktop wallpaper and lock screen to the [Bing image of the day](https
 - **Latest images** shows the last 8 Bing images of the day. Click one to set it on the desktop, the lock screen, or both.
 - **Set today's image now** applies the newest image to the desktop and lock screen immediately.
 - **Update daily** (on by default) checks every 4 hours with a systemd user timer and switches the wallpaper as soon as Bing publishes a new image. It also checks at login. If you pick an older image by hand, it stays until the next new Bing image comes out.
+- **Schedule** picks when the daily change happens: as soon as Bing publishes a new image (the default), or every day at a time you choose, such as 07:00. If the computer is off at that time, it changes at the next login or startup.
 - **Bing region** picks which country's image you get. The default follows your system language (falling back to United States).
 - Downloads the full-resolution (UHD, 3840×2160) image, so it stays sharp on 4K and multi-monitor setups.
 - Everything also works from the terminal: `bing-wallpaper --help`.
@@ -70,11 +71,12 @@ bing-wallpaper update       # apply today's image if it's new (--force to re-app
 bing-wallpaper list         # the latest 8 images
 bing-wallpaper set 3 --on lock   # image 3 on the lock screen (desktop, lock or both)
 bing-wallpaper region en-GB # or "auto"; --list shows all regions
+bing-wallpaper daily at 07:30  # change every day at 07:30 ("auto" = as soon as Bing publishes)
 bing-wallpaper daily off    # stop daily updates
 bing-wallpaper status
 ```
 
-The daily schedule is the `bing-wallpaper.timer` systemd user unit: `systemctl --user status bing-wallpaper.timer`, and its log is in `journalctl --user -u bing-wallpaper`.
+The daily schedule is the `bing-wallpaper.timer` systemd user unit: `systemctl --user status bing-wallpaper.timer`, and its log is in `journalctl --user -u bing-wallpaper`. A set time is stored as a drop-in in `~/.config/systemd/user/bing-wallpaper.timer.d/schedule.conf`.
 
 ## Files
 

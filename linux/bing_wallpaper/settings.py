@@ -37,6 +37,9 @@ DEFAULTS: Dict[str, Any] = {
     "market": None,
     # Check for a new image every few hours and apply it.
     "daily": True,
+    # Time of day for the daily change as "HH:MM", or None to change as soon as
+    # Bing publishes a new image.
+    "daily_time": None,
     # Where the daily image goes: "both", "desktop" or "lock".
     "daily_target": "both",
     # Optional shell command run with the image path as {path}, for desktops we

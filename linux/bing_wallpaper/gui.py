@@ -42,12 +42,14 @@ class Window(Gtk.ApplicationWindow):
             str(p) if (p := core.thumbnail(i)) else None
         ),
         apply: Callable[..., desktop.Result] = core.apply,
+        set_daily_time: Callable[[Optional[str]], str] = core.set_daily_time,
     ) -> None:
         super().__init__(application=app, title="Bing Wallpaper")
         self.set_default_size(860, 680)
         self.fetch_latest = fetch_latest
         self.fetch_thumbnail = fetch_thumbnail
         self.apply_image = apply
+        self.set_daily_time = set_daily_time
         self.cfg = settings.Settings()
         self.images: List[bing.BingImage] = []
         self.apply_after_load = False
@@ -72,6 +74,32 @@ class Window(Gtk.ApplicationWindow):
         self.daily_switch.connect("notify::active", self.on_daily)
         top.append(self.daily_switch)
         outer.append(top)
+
+        # When the daily change happens
+        when = Gtk.Box(spacing=8)
+        when.append(Gtk.Label(label="Change the wallpaper"))
+        self.when_dropdown = Gtk.DropDown.new_from_strings(["As soon as Bing publishes", "At a set time"])
+        when.append(self.when_dropdown)
+        daily_time = self.cfg.get("daily_time") or "07:00"
+        hour, minute = map(int, daily_time.split(":"))
+        self.hour_spin = Gtk.SpinButton.new_with_range(0, 23, 1)
+        self.minute_spin = Gtk.SpinButton.new_with_range(0, 59, 5)
+        for spin, value in ((self.hour_spin, hour), (self.minute_spin, minute)):
+            spin.set_wrap(True)
+            spin.set_value(value)
+            spin.connect("output", self.on_spin_output)
+        self.time_box = Gtk.Box(spacing=4)
+        self.time_box.append(self.hour_spin)
+        self.time_box.append(Gtk.Label(label=":"))
+        self.time_box.append(self.minute_spin)
+        when.append(self.time_box)
+        self.when_dropdown.set_selected(1 if self.cfg.get("daily_time") else 0)
+        self.time_box.set_sensitive(bool(self.cfg.get("daily_time")))
+        self.when_dropdown.connect("notify::selected", lambda *a: self.on_when_changed())
+        self.hour_spin.connect("value-changed", lambda *a: self.on_when_changed())
+        self.minute_spin.connect("value-changed", lambda *a: self.on_when_changed())
+        self.when_timeout = 0
+        outer.append(when)
 
         # Region
         region = Gtk.Box(spacing=12)
@@ -222,6 +250,41 @@ class Window(Gtk.ApplicationWindow):
             self.set_status(error)
         else:
             self.set_status("Daily updates are on." if on else "Daily updates are off.")
+
+    @staticmethod
+    def on_spin_output(spin: Gtk.SpinButton) -> bool:
+        spin.set_text(f"{int(spin.get_value()):02d}")
+        return True
+
+    def chosen_time(self) -> Optional[str]:
+        if self.when_dropdown.get_selected() == 0:
+            return None
+        return f"{int(self.hour_spin.get_value()):02d}:{int(self.minute_spin.get_value()):02d}"
+
+    def on_when_changed(self) -> None:
+        self.time_box.set_sensitive(self.when_dropdown.get_selected() == 1)
+        # Wait until the user stops clicking the spin buttons before rewriting the timer.
+        if self.when_timeout:
+            GLib.source_remove(self.when_timeout)
+        self.when_timeout = GLib.timeout_add(700, self.save_when)
+
+    def save_when(self) -> bool:
+        self.when_timeout = 0
+        daily_time = self.chosen_time()
+        if daily_time == self.cfg.get("daily_time"):
+            return False
+        self.cfg.values["daily_time"] = daily_time
+
+        def done(error: object, exc: Optional[Exception]) -> None:
+            if exc is not None or error:
+                self.set_status(f"Couldn't change the schedule: {exc or error}")
+            elif daily_time:
+                self.set_status(f"The wallpaper will change every day at {daily_time}.")
+            else:
+                self.set_status("The wallpaper will change as soon as Bing publishes a new image.")
+
+        _in_background(lambda: self.set_daily_time(daily_time), done)
+        return False
 
     def on_region(self, dropdown: Gtk.DropDown, _pspec: object) -> None:
         code = self.market_codes[dropdown.get_selected()]

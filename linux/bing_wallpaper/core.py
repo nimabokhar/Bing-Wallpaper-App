@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import datetime
 import os
 from pathlib import Path
 from typing import Callable, List, Optional
 
-from . import bing, desktop, settings
+from . import bing, desktop, schedule, settings
 
 #: Downloaded wallpapers to keep, so the gallery can re-apply recent ones offline.
 KEEP_IMAGES = 12
@@ -118,16 +119,39 @@ def latest(cfg: Optional[settings.Settings] = None) -> List[bing.BingImage]:
     return bing.fetch_latest(cfg.market)
 
 
-def update(force: bool = False) -> Optional[bing.BingImage]:
+def update(force: bool = False, now: Optional[datetime.datetime] = None) -> Optional[bing.BingImage]:
     """Applies the newest Bing image if it is new since the last check (or if `force`).
 
     Returns the image applied, or None if already up to date. If the user picked an
     older image by hand, it stays until Bing publishes a new one.
+
+    With a daily time set, the change happens once a day at that time: runs before it
+    (at startup or login) do nothing, and a run after a missed time catches up.
     """
     cfg = settings.Settings()
     state = settings.State()
+    daily_time = cfg.get("daily_time")
+    due = None
+    if daily_time and not force:
+        due = schedule.due_moment(daily_time, now).isoformat(timespec="minutes")
+        if state.get("scheduled_done") == due:
+            return None
     newest = bing.fetch_latest(cfg.market, 1)[0]
+    if due:
+        state.update(scheduled_done=due)
     if not force and state.get("last_seen") == newest.id:
         return None
     apply(newest, cfg.get("daily_target") or desktop.BOTH, cfg, state)
     return newest
+
+
+def set_daily_time(daily_time: Optional[str], now: Optional[datetime.datetime] = None) -> str:
+    """Sets the time of day for the daily change ("HH:MM"), or None for "as soon as
+    Bing publishes". Returns an error message, or "" on success."""
+    settings.Settings().set("daily_time", daily_time)
+    if daily_time:
+        # Start from the next occurrence, rather than changing straight away
+        # because today's time has already passed.
+        due = schedule.due_moment(daily_time, now).isoformat(timespec="minutes")
+        settings.State().update(scheduled_done=due)
+    return schedule.set_time(daily_time)

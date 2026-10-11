@@ -80,10 +80,32 @@ def cmd_region(args: argparse.Namespace) -> int:
     return 0
 
 
+def _when(cfg: settings.Settings) -> str:
+    t = cfg.get("daily_time")
+    return f"at {t}" if t else "as soon as Bing publishes a new image"
+
+
 def cmd_daily(args: argparse.Namespace) -> int:
     cfg = settings.Settings()
     if args.state is None:
-        print("on" if cfg.get("daily") and schedule.enabled() else "off")
+        on = cfg.get("daily") and schedule.enabled()
+        print(f"on, {_when(cfg)}" if on else "off")
+        return 0
+    if args.state == "at":
+        if not args.time:
+            print("Give a time like 07:30, or \"auto\" for as soon as Bing publishes.", file=sys.stderr)
+            return 2
+        daily_time = None if args.time.lower() in ("auto", "asap") else schedule.parse_time(args.time)
+        if daily_time is None and args.time.lower() not in ("auto", "asap"):
+            print(f"{args.time} isn't a time. Use 24-hour HH:MM, e.g. 07:30.", file=sys.stderr)
+            return 2
+        error = core.set_daily_time(daily_time)
+        if not error and cfg.get("daily") and not schedule.enabled():
+            error = schedule.enable()
+        if error:
+            print(error, file=sys.stderr)
+            return 1
+        print(f"The wallpaper will change {_when(settings.Settings())}.")
         return 0
     on = args.state == "on"
     cfg.set("daily", on)
@@ -91,7 +113,7 @@ def cmd_daily(args: argparse.Namespace) -> int:
     if error:
         print(error, file=sys.stderr)
         return 1
-    print("Daily updates are " + ("on." if on else "off."))
+    print(f"Daily updates are on, {_when(cfg)}." if on else "Daily updates are off.")
     return 0
 
 
@@ -100,7 +122,8 @@ def cmd_status(args: argparse.Namespace) -> int:
     state = settings.State()
     print(f"Desktop:        {core.current_desktop(state)}")
     print(f"Region:         {bing.market_name(cfg.market)}{'' if cfg.chosen_market else ' (automatic)'}")
-    print(f"Daily updates:  {'on' if cfg.get('daily') and schedule.enabled() else 'off'}")
+    daily_on = cfg.get("daily") and schedule.enabled()
+    print(f"Daily updates:  {'on, ' + _when(cfg) if daily_on else 'off'}")
     print(f"Current image:  {state.get('last_title') or state.get('last_applied') or 'none yet'}")
     print(f"Images folder:  {settings.data_dir()}")
     return 0
@@ -164,8 +187,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--list", action="store_true", help="list the regions")
     p.set_defaults(func=cmd_region)
 
-    p = sub.add_parser("daily", help="turn daily updates on or off")
-    p.add_argument("state", nargs="?", choices=("on", "off"))
+    p = sub.add_parser("daily", help="turn daily updates on or off, or set their time: daily at 07:30")
+    p.add_argument("state", nargs="?", choices=("on", "off", "at"))
+    p.add_argument("time", nargs="?", help='HH:MM (24-hour), or "auto" for as soon as Bing publishes')
     p.set_defaults(func=cmd_daily)
 
     p = sub.add_parser("status", help="show the current settings")

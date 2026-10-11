@@ -17,6 +17,7 @@ from bing_wallpaper import bing, desktop, gui  # noqa: E402
 from test_bing_wallpaper import ARCHIVE  # noqa: E402
 
 applied = []
+schedules = []
 failed = []
 
 
@@ -47,6 +48,7 @@ class SmokeApp(gui.App):
             fetch_latest=lambda market: bing.parse_archive(ARCHIVE),
             fetch_thumbnail=lambda image: None,
             apply=fake_apply,
+            set_daily_time=lambda t: schedules.append(t) or "",
         )
         window.present()
 
@@ -58,11 +60,16 @@ class SmokeApp(gui.App):
                 child = child.get_next_sibling()
             assert cards == 2, f"expected 2 gallery cards, got {cards}"
             window.today_button.emit("clicked")
-            GLib.timeout_add(500, guarded(finish), self)
+            window.when_dropdown.set_selected(1)
+            window.hour_spin.set_value(6)
+            window.minute_spin.set_value(45)
+            GLib.timeout_add(1500, guarded(finish), self)
             return False
 
         def finish():
             assert applied == [("OHR.Today_EN-US123", "both", "OHR.Today_EN-US123")], applied
+            assert schedules == ["06:45"], schedules
+            assert window.hour_spin.get_text() == "06", window.hour_spin.get_text()
             window.region_dropdown.set_selected(3)
             print("GUI smoke test passed:", window.status.get_text())
             self.quit()

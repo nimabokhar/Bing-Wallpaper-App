@@ -7,7 +7,9 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from bing_wallpaper import bing, cli, core, desktop, settings  # noqa: E402
+import datetime  # noqa: E402
+
+from bing_wallpaper import bing, cli, core, desktop, schedule, settings  # noqa: E402
 
 ARCHIVE = {
     "images": [
@@ -245,6 +247,57 @@ class UpdateTest(TempHome):
             self.assertEqual(cli.main(["list"]), 0)
             self.assertEqual(cli.main(["set", "9"]), 2)
         self.assertEqual(self.applied, [("OHR.Yesterday_EN-US456.jpg", "lock")])
+
+
+class ScheduleTest(UpdateTest):
+    def at(self, hhmm, day=11):
+        hour, minute = map(int, hhmm.split(":"))
+        return datetime.datetime(2026, 10, day, hour, minute)
+
+    def test_parse_time(self):
+        self.assertEqual(schedule.parse_time("7:30"), "07:30")
+        self.assertEqual(schedule.parse_time("19:05"), "19:05")
+        self.assertIsNone(schedule.parse_time("24:00"))
+        self.assertIsNone(schedule.parse_time("7pm"))
+
+    def test_due_moment(self):
+        self.assertEqual(schedule.due_moment("07:00", self.at("08:00")), self.at("07:00"))
+        self.assertEqual(schedule.due_moment("07:00", self.at("06:59")), self.at("07:00", day=10))
+
+    def test_dropin(self):
+        with mock.patch.object(schedule, "available", lambda: False):
+            self.assertEqual(schedule.set_time("06:30"), "")
+            text = schedule.dropin_path().read_text()
+            self.assertIn("OnCalendar=\nOnCalendar=*-*-* 06:30:00", text)
+            schedule.set_time(None)
+            self.assertFalse(schedule.dropin_path().exists())
+
+    def test_changes_once_a_day_at_the_set_time(self):
+        with mock.patch.object(schedule, "available", lambda: False):
+            core.set_daily_time("07:00", now=self.at("15:00", day=10))
+        # Startup/login runs before 07:00 don't change it, even with a new image.
+        self.assertIsNone(core.update(now=self.at("06:00")))
+        self.assertEqual(self.applied, [])
+        # The 07:00 run does, once.
+        self.assertIsNotNone(core.update(now=self.at("07:00")))
+        self.assertIsNone(core.update(now=self.at("09:00")))
+        self.assertEqual(len(self.applied), 1)
+
+    def test_catches_up_after_a_missed_time(self):
+        with mock.patch.object(schedule, "available", lambda: False):
+            core.set_daily_time("07:00", now=self.at("15:00", day=9))
+        # Computer was off at 07:00 on the 10th and 11th; first run afterwards applies.
+        self.assertIsNotNone(core.update(now=self.at("12:00")))
+
+    def test_cli_daily_at(self):
+        with mock.patch.object(schedule, "available", lambda: False), \
+                mock.patch.object(schedule, "enabled", lambda: True), mock.patch("sys.stdout"):
+            self.assertEqual(cli.main(["daily", "at", "6:15"]), 0)
+            self.assertEqual(settings.Settings().get("daily_time"), "06:15")
+            self.assertEqual(cli.main(["daily", "at", "auto"]), 0)
+            self.assertIsNone(settings.Settings().get("daily_time"))
+            with mock.patch("sys.stderr"):
+                self.assertEqual(cli.main(["daily", "at", "25:00"]), 2)
 
 
 if __name__ == "__main__":
