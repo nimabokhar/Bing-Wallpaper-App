@@ -4,7 +4,7 @@ Sets your phone's home screen and lock screen wallpaper to the [Bing image of th
 
 ## Features
 
-- **Latest images** shows Bing's images of the day, newest first, and keeps loading older ones as you scroll. The last couple of weeks come straight from Bing; older images come from the community-run [Bing Wallpaper Archive](https://github.com/npanuhin/Bing-Wallpaper-Archive), which has every image back to the archive's start for most regions (Australia and New Zealand use its "rest of the world" feed). Tap an image to set it on the home screen, the lock screen, or both.
+- **Latest images** shows Bing's images of the day for your region, newest first, and loads more as you scroll, back to the roughly 15 days Bing keeps. Tap an image to set it on the home screen, the lock screen, or both.
 - **Set today's image now** applies the newest image to both home and lock screen immediately.
 - **Change automatically every day** (on by default) changes the wallpaper once a day at the time you choose under **Change at** (7:00 by default). If Bing hasn't published the day's image for your region yet, it checks again hourly for a few hours. The schedule survives reboots. If you pick an older image by hand, it stays until the next scheduled change brings a newer Bing image.
 - **Bing region** lets you pick which country's image you get. The default follows your phone's language and region (falling back to United States). The app downloads the full-resolution (UHD) image and crops it to your screen.
