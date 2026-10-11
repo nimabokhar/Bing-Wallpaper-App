@@ -10,13 +10,34 @@ object Settings {
     private const val KEY_DAILY = "daily_enabled"
     private const val KEY_MARKET = "market"
     private const val KEY_THEME = "theme"
+    private const val KEY_HOUR = "schedule_hour"
+    private const val KEY_MINUTE = "schedule_minute"
+
+    // Bing publishes each market's new image around local midnight, so early
+    // morning is a safe default.
+    private const val DEFAULT_HOUR = 7
+    private const val DEFAULT_MINUTE = 0
 
     fun isDailyEnabled(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_DAILY, true)
 
     fun setDailyEnabled(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_DAILY, enabled).apply()
-        if (enabled) WallpaperWorker.schedule(context) else WallpaperWorker.cancel(context)
+        if (enabled) WallpaperWorker.schedule(context, replace = true) else WallpaperWorker.cancel(context)
+    }
+
+    /** Time of day for the automatic change, as (hour 0-23, minute). */
+    fun scheduleTime(context: Context): Pair<Int, Int> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return prefs.getInt(KEY_HOUR, DEFAULT_HOUR) to prefs.getInt(KEY_MINUTE, DEFAULT_MINUTE)
+    }
+
+    fun setScheduleTime(context: Context, hour: Int, minute: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_HOUR, hour)
+            .putInt(KEY_MINUTE, minute)
+            .apply()
+        if (isDailyEnabled(context)) WallpaperWorker.schedule(context, replace = true)
     }
 
     /** The market the user picked, or null to follow the device's region. */
