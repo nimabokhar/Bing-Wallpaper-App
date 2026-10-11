@@ -8,6 +8,33 @@ plugins {
 // installed after uninstalling the previous one.
 val signingStoreFile = System.getenv("SIGNING_STORE_FILE")?.let { file(it) }?.takeIf { it.exists() }
 
+// The version is shared by every platform and lives in VERSION at the repository
+// root, as MAJOR.MINOR.PATCH with an optional -alpha.N, -beta.N or -rc.N suffix.
+val appVersion = rootDir.resolve("../VERSION").readText().trim()
+
+// Turns the version into an always-increasing versionCode so Android installs
+// upgrades in order: 0.1.0-alpha.1 -> 100101, 0.1.0-beta.2 -> 100202,
+// 0.1.0 -> 100900, 1.2.3 -> 10203900.
+fun versionCodeOf(version: String): Int {
+    val match = Regex("""(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?""").matchEntire(version)
+        ?: error("VERSION must look like 1.2.3 or 1.2.3-alpha.4, got \"$version\"")
+    val (major, minor, patch, stage, number) = match.destructured
+    require(minor.toInt() < 100 && patch.toInt() < 100 && (number.toIntOrNull() ?: 0) < 100) {
+        "Minor, patch and pre-release numbers must be below 100 to fit the versionCode, got $version"
+    }
+    val stageCode = when (stage) {
+        "alpha" -> 100 + number.toInt()
+        "beta" -> 200 + number.toInt()
+        "rc" -> 300 + number.toInt()
+        else -> 900
+    }
+    return major.toInt() * 10_000_000 + minor.toInt() * 100_000 + patch.toInt() * 1_000 + stageCode
+}
+
+// CI builds of main between releases add the run number as build metadata
+// (0.1.0-alpha.1+build.42) so the app shows exactly which build is installed.
+val buildNumber = System.getenv("BUILD_NUMBER")?.takeIf { it.isNotBlank() }
+
 android {
     namespace = "com.nimabokhar.bingwallpaper"
     compileSdk = 35
@@ -16,9 +43,8 @@ android {
         applicationId = "com.nimabokhar.bingwallpaper"
         minSdk = 24
         targetSdk = 35
-        val run = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
-        versionCode = run
-        versionName = "1.0.$run"
+        versionCode = versionCodeOf(appVersion)
+        versionName = if (buildNumber != null) "$appVersion+build.$buildNumber" else appVersion
     }
 
     signingConfigs {
@@ -37,6 +63,10 @@ android {
             isMinifyEnabled = false
             signingConfig = signingConfigs.findByName("stable") ?: signingConfigs.getByName("debug")
         }
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {

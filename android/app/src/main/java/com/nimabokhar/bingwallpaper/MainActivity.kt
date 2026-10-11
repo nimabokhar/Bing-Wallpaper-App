@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
         galleryMessage = findViewById(R.id.galleryMessage)
         setNow = findViewById(R.id.setNow)
         status = findViewById(R.id.status)
+        findViewById<TextView>(R.id.version).text = getString(R.string.version, BuildConfig.VERSION_NAME)
 
         val dailySwitch = findViewById<Switch>(R.id.dailySwitch)
         dailySwitch.isChecked = Settings.isDailyEnabled(this)

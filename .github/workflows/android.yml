@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - "android/**"
+      - "VERSION"
+      - ".github/scripts/release.sh"
       - ".github/workflows/android.yml"
   pull_request:
     paths:
       - "android/**"
+      - "VERSION"
+      - ".github/scripts/release.sh"
       - ".github/workflows/android.yml"
   workflow_dispatch:
 
@@ -23,6 +27,20 @@ jobs:
         working-directory: android
     steps:
       - uses: actions/checkout@v4
+
+      # A push to main whose VERSION has no release yet becomes that release.
+      # Every other build is a snapshot and gets the run number as build metadata.
+      - name: Work out the version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = push ] && [ "${{ github.ref }}" = refs/heads/main ]; then
+            ../.github/scripts/release.sh check
+          else
+            echo "version=$(tr -d '[:space:]' < ../VERSION)" >> "$GITHUB_OUTPUT"
+            echo "kind=snapshot" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-java@v4
         with:
@@ -47,6 +65,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          BUILD_NUMBER: ${{ steps.version.outputs.kind == 'snapshot' && github.run_number || '' }}
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon assembleRelease
@@ -65,3 +84,11 @@ jobs:
           gh release view latest >/dev/null 2>&1 || \
             gh release create latest --title "Latest build" --notes "Built automatically from main. Download bing-wallpaper.apk on your phone to install."
           gh release upload latest bing-wallpaper.apk --clobber
+
+      - name: Publish the versioned release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.version.outputs.kind == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp bing-wallpaper.apk "bing-wallpaper-${{ steps.version.outputs.version }}.apk"
+          ../.github/scripts/release.sh publish "bing-wallpaper-${{ steps.version.outputs.version }}.apk"
