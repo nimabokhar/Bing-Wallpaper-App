@@ -36,7 +36,15 @@ swift run BingWallpaper    # run from the terminal (no app icon)
 scripts/build-app.sh       # dist/Bing Wallpaper.app, .dmg and .zip (Apple Silicon + Intel)
 ```
 
-`UNIVERSAL=0 scripts/build-app.sh` builds for Apple Silicon only. The version comes from [`../VERSION`](../VERSION).
+`UNIVERSAL=0 scripts/build-app.sh` builds for Apple Silicon only.
+
+## Versions
+
+The app uses the version shared by every platform, from [`../VERSION`](../VERSION) (see [Versions](../README.md#versions)). It shows in Settings and in **About Bing Wallpaper**. Builds of `main` made after a version was released show as `<version>+build.<CI run number>`.
+
+- `CFBundleShortVersionString` is the version without its pre-release label (`0.3.0`), as macOS expects.
+- `CFBundleVersion` always goes up, using the same numbering as Android's versionCode: `0.3.0-alpha.1` is `300101`, a later beta `300201`, the final `0.3.0` is `300900`. CI builds between releases add the run number, like `300101.42`.
+- When `VERSION` changes on `main`, CI attaches `bing-wallpaper-<version>-macos.dmg` to that version's GitHub release; every build of `main` also updates `bing-wallpaper-macos.dmg` on the latest release.
 
 `"dist/Bing Wallpaper.app/Contents/MacOS/BingWallpaper" --self-test /tmp/out` is what CI runs: it opens the window, loads Bing's images, sets today's image on every display, checks macOS reports it, saves screenshots to `/tmp/out` and quits with 0 on success. It changes your wallpaper.
 
