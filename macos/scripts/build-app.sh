@@ -13,7 +13,28 @@ cd "$here"
 version="$(tr -d '[:space:]' < "$root/VERSION" 2>/dev/null || echo 0.0.0-dev)"
 full_version="$version${BUILD_NUMBER:++build.$BUILD_NUMBER}"
 short_version="${version%%-*}"           # 0.2.0-alpha.2 -> 0.2.0
-build_version="${BUILD_NUMBER:-$short_version}" # must be numbers and dots
+
+# CFBundleVersion must always go up so macOS treats each build as newer. Same scheme as
+# Android's versionCode: 0.1.0-alpha.1 -> 100101, 0.1.0-beta.2 -> 100202, 0.1.0 -> 100900,
+# 1.2.3 -> 10203900. CI builds between releases add the run number: 300101.42.
+if [[ ! "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-(alpha|beta|rc)\.([0-9]+))?$ ]]; then
+  echo "VERSION must look like 1.2.3 or 1.2.3-alpha.4, got \"$version\"" >&2
+  exit 1
+fi
+major="${BASH_REMATCH[1]}" minor="${BASH_REMATCH[2]}" patch="${BASH_REMATCH[3]}"
+stage="${BASH_REMATCH[5]}" number="${BASH_REMATCH[6]:-0}"
+if [ "$minor" -ge 100 ] || [ "$patch" -ge 100 ] || [ "$number" -ge 100 ]; then
+  echo "Minor, patch and pre-release numbers must be below 100, got $version" >&2
+  exit 1
+fi
+case "$stage" in
+  alpha) stage_code=$((100 + number)) ;;
+  beta) stage_code=$((200 + number)) ;;
+  rc) stage_code=$((300 + number)) ;;
+  *) stage_code=900 ;;
+esac
+version_code=$((major * 10000000 + minor * 100000 + patch * 1000 + stage_code))
+build_version="$version_code${BUILD_NUMBER:+.$BUILD_NUMBER}"
 
 arch_flags=(--arch arm64)
 if [ "${UNIVERSAL:-1}" = 1 ]; then arch_flags+=(--arch x86_64); fi
@@ -53,5 +74,5 @@ ln -s /Applications "$staging/Applications"
 hdiutil create -volname "Bing Wallpaper" -srcfolder "$staging" -fs HFS+ -format UDZO -ov "$dist/bing-wallpaper-macos.dmg"
 rm -rf "$staging"
 
-echo "Built $full_version:"
+echo "Built $full_version (bundle version $build_version):"
 ls -la "$dist"

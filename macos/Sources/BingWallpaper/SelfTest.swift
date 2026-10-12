@@ -17,6 +17,9 @@ enum SelfTest {
         }
 
         let model = delegate.model
+        let bundleVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+        check(AppModel.version != "development build" && !bundleVersion.isEmpty,
+              "version \(AppModel.version), bundle version \(bundleVersion)")
         model.theme = .light
         check(delegate.mainWindow?.isVisible == true, "main window is open")
         check(NSApp.activationPolicy() == .regular, "Dock icon shows while the window is open")
