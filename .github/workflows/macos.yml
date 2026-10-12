@@ -1,0 +1,94 @@
+name: macOS app
+
+on:
+  push:
+    branches: [main]
+    paths: ["macos/**", "icon/**", "VERSION", ".github/workflows/macos.yml", ".github/scripts/release.sh"]
+  pull_request:
+    paths: ["macos/**", "icon/**", "VERSION", ".github/workflows/macos.yml", ".github/scripts/release.sh"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: macos
+
+jobs:
+  build:
+    # macos-15 runners are Apple Silicon (M1) Macs.
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Toolchain
+        run: |
+          uname -m
+          sw_vers
+          swift --version
+
+      - name: Unit tests
+        run: swift test
+
+      - name: Version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = push ] && [ "${{ github.ref }}" = refs/heads/main ]; then
+            ../.github/scripts/release.sh check
+          else
+            echo "version=$(tr -d '[:space:]' < ../VERSION)" >> "$GITHUB_OUTPUT"
+            echo "kind=snapshot" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the app, .dmg and .zip
+        env:
+          BUILD_NUMBER: ${{ steps.version.outputs.kind == 'snapshot' && github.run_number || '' }}
+        run: scripts/build-app.sh
+
+      # Opens the real app on this Apple Silicon Mac: it loads Bing's images in its window, sets
+      # today's image as the wallpaper on every display, checks macOS reports it, and quits.
+      - name: Launch test
+        run: |
+          app="dist/Bing Wallpaper.app/Contents/MacOS/BingWallpaper"
+          file "$app"
+          arch -arm64 "$app" --self-test "$PWD/dist/self-test" &
+          pid=$!
+          ( sleep 180; kill "$pid" 2>/dev/null && echo "Timed out" ) &
+          wait "$pid"
+          cat dist/self-test/result.txt
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: bing-wallpaper-macos-screenshots
+          path: macos/dist/self-test/
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: bing-wallpaper-macos
+          path: |
+            macos/dist/bing-wallpaper-macos.dmg
+            macos/dist/bing-wallpaper-macos.zip
+
+      - name: Publish to the "latest" release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Shared with the other platforms' workflows; "|| true" covers one of them creating it first.
+          gh release view latest >/dev/null 2>&1 || \
+            gh release create latest --title "Latest build" --notes "Built automatically from main." || true
+          gh release upload latest dist/bing-wallpaper-macos.dmg dist/bing-wallpaper-macos.zip --clobber
+
+      - name: Publish the versioned release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.version.outputs.kind == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          cp dist/bing-wallpaper-macos.dmg "dist/bing-wallpaper-$v-macos.dmg"
+          ../.github/scripts/release.sh publish "dist/bing-wallpaper-$v-macos.dmg"
