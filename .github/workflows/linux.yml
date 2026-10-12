@@ -65,7 +65,12 @@ jobs:
             install: dnf install -y ./bing-wallpaper.rpm
           - distro: arch
             image: archlinux:latest
-            install: pacman -Syu --noconfirm && pacman -U --noconfirm ./bing-wallpaper.pkg.tar.zst
+            # Also fails on any pacman warning, such as "directory permissions differ".
+            install: >-
+              pacman -Syu --noconfirm &&
+              { pacman -U --noconfirm ./bing-wallpaper.pkg.tar.zst > pacman.log 2>&1 || { cat pacman.log; exit 1; }; } &&
+              cat pacman.log &&
+              if grep -i '^warning:' pacman.log; then echo "pacman printed the warnings above"; exit 1; fi
     container: ${{ matrix.image }}
     defaults:
       run:

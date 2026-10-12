@@ -64,6 +64,32 @@ makepkg -si
 
 Then open **Bing Wallpaper** from your app menu once (or log out and back in). Daily updates are switched on from then on.
 
+## Uninstall
+
+First stop the daily change, while the app is still installed:
+
+```sh
+bing-wallpaper daily off
+```
+
+Then remove the package. It takes the app, the systemd timer and the login (autostart) entry with it:
+
+| Distro | Remove |
+| --- | --- |
+| Debian, Ubuntu, Mint | `sudo apt remove bing-wallpaper` |
+| Fedora | `sudo dnf remove bing-wallpaper` |
+| Arch, Manjaro | `sudo pacman -R bing-wallpaper` (or `bing-wallpaper-git` if you built it from the PKGBUILD) |
+
+Your settings and downloaded images stay in your home folder. For a full cleanup, also remove them (set a different wallpaper first, since the current one is in `~/.local/share/bing-wallpaper`):
+
+```sh
+systemctl --user disable --now bing-wallpaper.timer   # stop the daily change (run as yourself, not with sudo)
+rm -rf ~/.config/bing-wallpaper ~/.config/systemd/user/bing-wallpaper.timer.d \
+       ~/.local/share/bing-wallpaper ~/.local/state/bing-wallpaper ~/.cache/bing-wallpaper
+```
+
+The first line is only needed if you removed the package without running `bing-wallpaper daily off` first.
+
 ## Command line
 
 ```sh
@@ -85,6 +111,8 @@ The daily schedule is the `bing-wallpaper.timer` systemd user unit: `systemctl -
 - Settings: `~/.config/bing-wallpaper/config.json`
 - Downloaded wallpapers (the last 12 are kept): `~/.local/share/bing-wallpaper/images/`
 - Gallery previews: `~/.cache/bing-wallpaper/images/` (unused ones are deleted after 30 days)
+- What was last set, for the daily check: `~/.local/state/bing-wallpaper/state.json`
+- A set daily time: `~/.config/systemd/user/bing-wallpaper.timer.d/schedule.conf`
 
 ## Build and test
 
