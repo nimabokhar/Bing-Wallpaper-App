@@ -80,11 +80,15 @@ class MainActivity : AppCompatActivity() {
 
         gallery = findViewById(R.id.gallery)
         statusScrim = findViewById(R.id.statusScrim)
-        header = layoutInflater.inflate(R.layout.gallery_header, gallery, false)
 
         // Big landscape cards: one per row on a phone, more on wide windows such as
         // an unfolded foldable or a tablet.
         val columns = (resources.configuration.screenWidthDp / 360).coerceIn(1, 4)
+        galleryLayout = GridLayoutManager(this, columns)
+        // The layout manager must be in place before anything is inflated into the
+        // RecyclerView: it supplies the layout params, and without it inflating throws.
+        gallery.layoutManager = galleryLayout
+        header = layoutInflater.inflate(R.layout.gallery_header, gallery, false)
         val spacing = resources.getDimensionPixelSize(R.dimen.grid_spacing)
         val screenWidth = resources.displayMetrics.widthPixels
         val thumbWidth = (screenWidth - spacing * (columns + 1)) / columns
@@ -94,8 +98,7 @@ class MainActivity : AppCompatActivity() {
                 loadMore()
             }
         }
-        galleryLayout = GridLayoutManager(this, columns).apply { spanSizeLookup = adapter.spanSizeLookup(columns) }
-        gallery.layoutManager = galleryLayout
+        galleryLayout.spanSizeLookup = adapter.spanSizeLookup(columns)
         gallery.adapter = adapter
         // The list always fills the screen, so adding images never re-measures it.
         gallery.setHasFixedSize(true)
