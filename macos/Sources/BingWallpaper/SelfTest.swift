@@ -27,9 +27,13 @@ enum SelfTest {
         }
         check(!model.images.isEmpty, "loaded \(model.images.count) images from Bing (\(model.effectiveMarket)), error: \(model.loadError ?? "none")")
 
+        // The daily change may be putting up today's image already; let it finish first.
+        while model.isSetting && Date() < deadline.addingTimeInterval(60) {
+            try? await Task.sleep(for: .milliseconds(250))
+        }
         if let today = model.today {
             let ok = await model.setWallpaper(today)
-            check(ok, "set today's image: \(today.title)")
+            check(ok, "set today's image: \(today.title) \(ok ? "" : model.toast?.text ?? "")")
             if let path = model.lastSet?.path {
                 for screen in NSScreen.screens {
                     check(WallpaperSetter.isShowing(URL(fileURLWithPath: path), on: screen),

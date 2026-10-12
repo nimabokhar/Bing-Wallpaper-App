@@ -60,6 +60,15 @@ jobs:
           wait "$pid"
           cat dist/self-test/result.txt
 
+      # TEMPORARY while developing: small screenshots in the log, to review the layout.
+      - name: Print screenshots
+        if: always()
+        run: |
+          for f in dist/self-test/*.png; do
+            sips -Z 720 -s format jpeg -s formatOptions 60 "$f" --out /tmp/shot.jpg >/dev/null
+            echo "SHOT $(basename "$f") $(base64 -i /tmp/shot.jpg | tr -d '\n')"
+          done
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v6
