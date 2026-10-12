@@ -52,9 +52,12 @@ uninstall:
 packages:
 	rm -rf build dist && mkdir -p dist
 	$(MAKE) install DESTDIR=$(CURDIR)/build/root
-	PKG_VERSION=$(TILDE_VERSION) nfpm package -f packaging/nfpm.yaml -p deb -t dist/
-	PKG_VERSION=$(TILDE_VERSION) nfpm package -f packaging/nfpm.yaml -p rpm -t dist/
-	PKG_VERSION=$(ARCH_VERSION) nfpm package -f packaging/nfpm.yaml -p archlinux -t dist/
+	cd build/root && find usr -type f | LC_ALL=C sort \
+		| sed 's|.*|  - src: build/root/&\n    dst: /&|' > ../usr-files.yaml
+	sed -e '/# @USR_FILES@/r build/usr-files.yaml' -e '/# @USR_FILES@/d' packaging/nfpm.yaml > build/nfpm.yaml
+	PKG_VERSION=$(TILDE_VERSION) nfpm package -f build/nfpm.yaml -p deb -t dist/
+	PKG_VERSION=$(TILDE_VERSION) nfpm package -f build/nfpm.yaml -p rpm -t dist/
+	PKG_VERSION=$(ARCH_VERSION) nfpm package -f build/nfpm.yaml -p archlinux -t dist/
 
 version:
 	@echo $(VERSION)

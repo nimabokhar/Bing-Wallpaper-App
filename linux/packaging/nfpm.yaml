@@ -1,4 +1,5 @@
 # Builds the .deb, .rpm and Arch packages from the tree `make install` stages in build/root.
+# Use it through `make packages`, which fills in the file list.
 name: bing-wallpaper
 arch: all
 platform: linux
@@ -19,9 +20,20 @@ homepage: https://github.com/nimabokhar/Bing-Wallpaper-Android-App
 license: MIT
 
 contents:
-  - src: build/root/usr/
-    dst: /usr/
-    type: tree
+  # `make packages` lists every file under build/root/usr here, one entry each. A
+  # "tree" entry would also pack each directory with Go's directory bit left in its
+  # mode, which makes pacman warn "directory permissions differ" on /usr and the rest.
+  # @USR_FILES@
+  # The app's own directories, so uninstalling removes them too.
+  - dst: /usr/share/bing-wallpaper
+    type: dir
+    file_info: {mode: 0755}
+  - dst: /usr/share/bing-wallpaper/bing_wallpaper
+    type: dir
+    file_info: {mode: 0755}
+  - dst: /usr/share/licenses/bing-wallpaper
+    type: dir
+    file_info: {mode: 0755}
   - src: build/root/etc/xdg/autostart/bing-wallpaper-autostart.desktop
     dst: /etc/xdg/autostart/bing-wallpaper-autostart.desktop
     type: config

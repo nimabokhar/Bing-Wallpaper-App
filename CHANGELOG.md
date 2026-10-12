@@ -6,6 +6,13 @@ While the apps are in alpha, expect rough edges and changes between builds.
 
 ## [Unreleased]
 
+## [0.3.1-alpha.1] - 2026-10-12
+
+### Linux
+
+- The Arch package installs without the `directory permissions differ` warnings on /usr, /usr/bin, the icon folders and others. The package builder stored each folder with an extra flag in its mode, which pacman counts as a difference even though the permissions shown are the same.
+- CI now fails the Arch install check if pacman prints any warning.
+
 ## [0.3.0-alpha.1] - 2026-10-12
 
 The first macOS version.
