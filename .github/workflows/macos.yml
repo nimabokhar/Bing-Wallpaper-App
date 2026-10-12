@@ -60,43 +60,6 @@ jobs:
           wait "$pid"
           cat dist/self-test/result.txt
 
-      # TEMPORARY while developing: small screenshots as annotations (10 x 4 KB per step), to review the layout.
-      - name: Screenshot window-light
-        if: always()
-        run: |
-          sips -Z 560 -s format jpeg -s formatOptions 40 dist/self-test/window-light.png --out /tmp/window-light.jpg >/dev/null
-          base64 -i /tmp/window-light.jpg | tr -d '\n' | fold -w 4000 | head -10 | nl -v0 -w2 -s' ' | while read -r i chunk; do
-            echo "::notice title=SHOT window-light $i::$chunk"
-          done
-          wc -c /tmp/window-light.jpg
-
-      - name: Screenshot window-dark
-        if: always()
-        run: |
-          sips -Z 560 -s format jpeg -s formatOptions 40 dist/self-test/window-dark.png --out /tmp/window-dark.jpg >/dev/null
-          base64 -i /tmp/window-dark.jpg | tr -d '\n' | fold -w 4000 | head -10 | nl -v0 -w2 -s' ' | while read -r i chunk; do
-            echo "::notice title=SHOT window-dark $i::$chunk"
-          done
-          wc -c /tmp/window-dark.jpg
-
-      - name: Screenshot settings
-        if: always()
-        run: |
-          sips -Z 560 -s format jpeg -s formatOptions 40 dist/self-test/settings.png --out /tmp/settings.jpg >/dev/null
-          base64 -i /tmp/settings.jpg | tr -d '\n' | fold -w 4000 | head -10 | nl -v0 -w2 -s' ' | while read -r i chunk; do
-            echo "::notice title=SHOT settings $i::$chunk"
-          done
-          wc -c /tmp/settings.jpg
-
-      - name: Screenshot screen
-        if: always()
-        run: |
-          sips -Z 560 -s format jpeg -s formatOptions 40 dist/self-test/screen.png --out /tmp/screen.jpg >/dev/null
-          base64 -i /tmp/screen.jpg | tr -d '\n' | fold -w 4000 | head -10 | nl -v0 -w2 -s' ' | while read -r i chunk; do
-            echo "::notice title=SHOT screen $i::$chunk"
-          done
-          wc -c /tmp/screen.jpg
-
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v6
