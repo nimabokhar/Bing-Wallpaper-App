@@ -21,23 +21,23 @@ Each platform is a separate app in its own folder, with its own build and its ow
 | Android (home and lock screen) | [`android/`](android/) | Available: [download the APK](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.apk) |
 | Linux (desktop and lock screen; Fedora, Arch, Debian) | [`linux/`](linux/) | Available: [.deb](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.deb), [.rpm](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.rpm), [Arch](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper.pkg.tar.zst) |
 | Windows | `windows/` | Planned |
-| macOS | `macos/` | Planned |
+| macOS (Apple Silicon and Intel, macOS 14+) | [`macos/`](macos/) | Available: [.dmg](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper-macos.dmg) |
 
 All builds are published to the same [**latest release**](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/tag/latest).
 
 ## What the apps can do
 
-| | Android | Linux |
-| --- | --- | --- |
-| Sets the wallpaper | Home screen and lock screen | Desktop and lock screen |
-| Changes it every day | Yes, at a time you choose (7:00 by default) | Yes, as soon as Bing publishes a new image, or at a time you choose |
-| Keeps working after a restart | Yes | Yes (systemd user timer, also checks at login) |
-| Browse and pick older images | Scroll back through about two weeks of Bing images | Scroll back through about two weeks of Bing images |
-| Choose where a picked image goes | Home, lock or both | Desktop, lock or both |
-| Bing region (country) | 14 regions, or Automatic | 14 regions, or Automatic |
-| Image resolution | 4K (default), 1920×1080, 1366×768, portrait 1080×1920 | 4K (default) down to 1024×768, plus portrait 1080×1920 |
-| Dark mode | Follows the system, or Light or Dark | Not yet |
-| Command line | No | `bing-wallpaper` does everything the window does |
+| | Android | Linux | macOS |
+| --- | --- | --- | --- |
+| Sets the wallpaper | Home screen and lock screen | Desktop and lock screen | Every display (the lock screen shows it too) |
+| Changes it every day | Yes, at a time you choose (7:00 by default) | Yes, as soon as Bing publishes a new image, or at a time you choose | Yes, at a time you choose (7:00 by default) |
+| Keeps working after a restart | Yes | Yes (systemd user timer, also checks at login) | Yes (opens at login, runs in the menu bar) |
+| Browse and pick older images | Scroll back through about two weeks of Bing images | Scroll back through about two weeks of Bing images | Scroll back through about two weeks of Bing images |
+| Choose where a picked image goes | Home, lock or both | Desktop, lock or both | No, macOS uses the desktop picture on the lock screen |
+| Bing region (country) | 14 regions, or Automatic | 14 regions, or Automatic | 14 regions, or Automatic |
+| Image resolution | 4K (default), 1920×1080, 1366×768, portrait 1080×1920 | 4K (default) down to 1024×768, plus portrait 1080×1920 | 4K (default) down to 1024×768, plus portrait 1080×1920 |
+| Dark mode | Follows the system, or Light or Dark | Not yet | Follows the system, or Light or Dark |
+| Command line | No | `bing-wallpaper` does everything the window does | No |
 
 ### Android
 
@@ -67,6 +67,16 @@ Requires Android 7.0 or newer. More detail in the [Android README](android/READM
 
 More detail, including the full list of desktops and commands, in the [Linux README](linux/README.md).
 
+### macOS
+
+- **Every display:** today's image goes on all your displays, and on each Space as you switch to it. The lock screen shows the desktop wallpaper on macOS, so it changes too.
+- **Daily change at a set time**, with hourly retries until Bing publishes, and catch-up after sleep or a restart.
+- **Gallery:** scroll back through about two weeks of Bing images; hover and click **Set as wallpaper**.
+- **Menu bar app:** keeps running in the menu bar with the window closed and opens at login. Region, image size, theme and Open at login are in Settings (⌘,).
+- One download for Apple Silicon (M1 and newer) and Intel Macs, macOS 14 Sonoma or newer.
+
+More detail in the [macOS README](macos/README.md).
+
 ## Install
 
 > The apps are in **alpha**. They work, but expect rough edges and changes between builds. The links below are the newest build; each version also has its own pre-release on the [releases page](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases).
@@ -91,6 +101,12 @@ Download the package for your distro, then install it:
 
 Then open **Bing Wallpaper** from your app menu once (or log out and back in). Daily changes run on their own from then on.
 
+### macOS
+
+1. Download [`bing-wallpaper-macos.dmg`](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper-macos.dmg), open it and drag **Bing Wallpaper** to **Applications**.
+2. Open it. The app isn't signed with an Apple Developer ID yet, so the first time macOS blocks it: open **System Settings → Privacy & Security**, click **Open Anyway** next to "Bing Wallpaper was blocked", and confirm. This is only needed once.
+3. Click **Set as wallpaper**. Daily changes run on their own from then on.
+
 ## Versions
 
 Every platform shares one version number, kept in [`VERSION`](VERSION) and following [semantic versioning](https://semver.org) with pre-release labels (`0.1.0-alpha.1`, then `-alpha.2`, `-beta.1`, `-rc.1`, and finally `0.1.0`). What changed in each version is in the [changelog](CHANGELOG.md).
@@ -106,6 +122,7 @@ To cut a new version, add its notes under a new `## [<version>]` heading in `CHA
 ```
 android/            Android app (Kotlin, Gradle)
 linux/              Linux app (Python, GTK 4) and its .deb, .rpm and Arch packaging
+macos/              macOS app (Swift, SwiftUI) and its .dmg build
 icon/               App icon: SVG source plus PNG and ICO exports for every platform
 .github/workflows/  One CI workflow per platform, each only runs on changes to its folder
 ```

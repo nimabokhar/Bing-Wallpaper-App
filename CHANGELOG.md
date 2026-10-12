@@ -6,6 +6,10 @@ While the apps are in alpha, expect rough edges and changes between builds.
 
 ## [Unreleased]
 
+### macOS
+
+- First macOS version, for Apple Silicon Macs (and Intel), macOS 14 Sonoma or newer: sets today's Bing image on every display (the lock screen shows it too), changes it daily at a time you choose, and has the region, image size, theme and scrolling gallery of the other apps. It runs in the menu bar and opens at login. Download `bing-wallpaper-macos.dmg`.
+
 ## [0.2.0-alpha.2] - 2026-10-11
 
 ### Android
