@@ -12,6 +12,7 @@ While the apps are in alpha, expect rough edges and changes between builds.
 
 - The Arch package installs without the `directory permissions differ` warnings on /usr, /usr/bin, the icon folders and others. The package builder stored each folder with an extra flag in its mode, which pacman counts as a difference even though the permissions shown are the same.
 - CI now fails the Arch install check if pacman prints any warning.
+- The README explains how to uninstall on Debian, Ubuntu, Fedora and Arch, including stopping the daily timer and removing settings, images and cache for a full cleanup.
 
 ## [0.3.0-alpha.1] - 2026-10-12
 

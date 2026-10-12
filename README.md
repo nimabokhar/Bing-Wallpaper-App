@@ -101,6 +101,16 @@ Download the package for your distro, then install it:
 
 Then open **Bing Wallpaper** from your app menu once (or log out and back in). Daily changes run on their own from then on.
 
+To uninstall, run `bing-wallpaper daily off`, then `sudo apt remove bing-wallpaper` (Debian, Ubuntu), `sudo dnf remove bing-wallpaper` (Fedora) or `sudo pacman -R bing-wallpaper` (Arch). For a full cleanup, also delete your settings and images:
+
+```sh
+systemctl --user disable --now bing-wallpaper.timer   # stop the daily change (run as yourself, not with sudo)
+rm -rf ~/.config/bing-wallpaper ~/.config/systemd/user/bing-wallpaper.timer.d \
+       ~/.local/share/bing-wallpaper ~/.local/state/bing-wallpaper ~/.cache/bing-wallpaper
+```
+
+See [Uninstall](linux/README.md#uninstall) in the Linux README for details.
+
 ### macOS
 
 1. Download [`bing-wallpaper-macos.dmg`](https://github.com/nimabokhar/Bing-Wallpaper-Android-App/releases/download/latest/bing-wallpaper-macos.dmg), open it and drag **Bing Wallpaper** to **Applications**.
