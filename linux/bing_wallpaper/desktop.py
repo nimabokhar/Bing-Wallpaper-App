@@ -54,12 +54,15 @@ def detect(env: Optional[dict] = None) -> str:
         ("lxde", ("lxde",)),
         ("hyprland", ("hyprland",)),
         ("sway", ("sway",)),
+        ("niri", ("niri",)),
         ("gnome", ("gnome", "ubuntu", "unity", "pop", "gnome-xorg", "gnome-classic", "zorin")),
     ):
         if any(p in aliases for p in parts):
             return key
     if env.get("HYPRLAND_INSTANCE_SIGNATURE"):
         return "hyprland"
+    if env.get("NIRI_SOCKET"):
+        return "niri"
     if env.get("SWAYSOCK"):
         return "sway"
     return "unknown"
@@ -192,43 +195,115 @@ def _set_pcmanfm(path: Path, target: str, run_: Runner, result: Result, qt: bool
         result.notes.append(_lock_link_note("LXQt" if qt else "LXDE"))
 
 
-def _set_sway(path: Path, target: str, run_: Runner, result: Result) -> None:
-    if target in (DESKTOP, BOTH):
-        if shutil.which("swww"):
-            run_(["swww", "img", str(path)])
-        else:
-            run_(["swaymsg", "output", "*", "bg", str(path), "fill"])
-        result.done.append(DESKTOP)
-    if target in (LOCK, BOTH):
-        result.notes.append(_lock_link_note("Sway"))
+def _dms_running(run_: Runner) -> bool:
+    """True when DankMaterialShell is running and answers its IPC."""
+    if not shutil.which("dms"):
+        return False
+    try:
+        run_(["dms", "ipc", "call", "wallpaper", "get"])
+        return True
+    except WallpaperError:
+        return False
 
 
-def _set_hyprland(path: Path, target: str, run_: Runner, result: Result) -> None:
+SWAYBG_UNIT = "bing-wallpaper-swaybg"
+
+
+def _quiet(cmd: Sequence[str]) -> None:
+    try:
+        subprocess.run(list(cmd), capture_output=True, timeout=10, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def spawn_swaybg(path: Path) -> None:
+    """Starts swaybg in the background, replacing any swaybg already running.
+
+    swaybg has to keep running to show the image. Under the daily timer this
+    process lives in a short-lived systemd service that kills its children when
+    it ends, so swaybg is started as its own user unit when systemd is there."""
+    cmd = ["swaybg", "-i", str(path), "-m", "fill"]
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    use_systemd = bool(shutil.which("systemd-run") and runtime and Path(runtime, "systemd").is_dir())
+    if use_systemd:
+        _quiet(["systemctl", "--user", "stop", f"{SWAYBG_UNIT}.service"])
+    _quiet(["pkill", "-x", "swaybg"])
+    if use_systemd:
+        run(["systemd-run", "--user", "--collect", f"--unit={SWAYBG_UNIT}", *cmd])
+        return
+    try:
+        subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError as e:
+        raise WallpaperError(f"swaybg: {e}") from e
+
+
+def _set_wayland(path: Path, target: str, run_: Runner, result: Result, name: str) -> None:
+    """Wayland compositors without a wallpaper setting of their own (niri, Sway,
+    Hyprland and other wlroots-style ones). Tries, in order: DankMaterialShell,
+    awww/swww, the compositor's own tool, then swaybg."""
+    if _dms_running(run_):
+        # DMS draws the wallpaper itself and its lock screen shows the same image.
+        run_(["dms", "ipc", "call", "wallpaper", "set", str(path)])
+        result.done += [DESKTOP, LOCK] if target == BOTH else [target]
+        if target != BOTH:
+            result.notes.append("DankMaterialShell uses the same image for the desktop and lock screen.")
+        return
     if target in (DESKTOP, BOTH):
-        if shutil.which("swww"):
-            run_(["swww", "img", str(path)])
-        elif shutil.which("hyprctl"):
-            run_(["hyprctl", "hyprpaper", "preload", str(path)])
-            run_(["hyprctl", "hyprpaper", "wallpaper", f",{path}"])
+        errors: List[str] = []
+        for setter in _wayland_setters(path, name):
+            try:
+                setter(run_)
+                break
+            except WallpaperError as e:
+                errors.append(str(e))
         else:
-            raise WallpaperError("Install hyprpaper or swww to set the Hyprland wallpaper.")
+            hint = (
+                f"Couldn't set the wallpaper on {LABELS.get(name, name)}. Install swaybg, awww (swww) "
+                "or run DankMaterialShell, or set custom_command in ~/.config/bing-wallpaper/config.json."
+            )
+            raise WallpaperError(hint + ("\n" + "\n".join(errors) if errors else ""))
         result.done.append(DESKTOP)
     if target in (LOCK, BOTH):
-        result.notes.append(_lock_link_note("Hyprland (hyprlock)"))
+        result.notes.append(_lock_link_note(LOCK_LABELS.get(name, LABELS.get(name, name))))
+
+
+LABELS = {"niri": "niri", "sway": "Sway", "hyprland": "Hyprland", "wayland": "this desktop"}
+LOCK_LABELS = {"hyprland": "Hyprland (hyprlock)"}
+
+
+def _wayland_setters(path: Path, name: str) -> List[Callable[[Runner], None]]:
+    p = str(path)
+    setters: List[Callable[[Runner], None]] = []
+    # swww was renamed awww; both need their daemon running.
+    for tool in ("awww", "swww"):
+        if shutil.which(tool):
+            setters.append(lambda r, tool=tool: r([tool, "img", p]))
+    if name == "sway" and shutil.which("swaymsg"):
+        setters.append(lambda r: r(["swaymsg", "output", "*", "bg", p, "fill"]))
+    if name == "hyprland" and shutil.which("hyprctl"):
+        def hyprpaper(r: Runner) -> None:
+            r(["hyprctl", "hyprpaper", "preload", p])
+            r(["hyprctl", "hyprpaper", "wallpaper", f",{p}"])
+        setters.append(hyprpaper)
+    if shutil.which("swaybg"):
+        setters.append(lambda r: spawn_swaybg(path))
+    return setters
 
 
 def _set_generic(path: Path, target: str, run_: Runner, result: Result) -> None:
+    if os.environ.get("WAYLAND_DISPLAY") or _dms_running(run_):
+        _set_wayland(path, target, run_, result, "wayland")
+        return
     if target in (DESKTOP, BOTH):
-        if os.environ.get("WAYLAND_DISPLAY") and shutil.which("swww"):
-            run_(["swww", "img", str(path)])
-        elif shutil.which("feh"):
+        if shutil.which("feh"):
             run_(["feh", "--bg-fill", str(path)])
         elif shutil.which("nitrogen"):
             run_(["nitrogen", "--set-zoom-fill", "--save", str(path)])
         else:
             raise WallpaperError(
                 "Don't know how to set the wallpaper on this desktop. Set custom_command in "
-                "~/.config/bing-wallpaper/config.json, e.g. \"swww img {path}\"."
+                "~/.config/bing-wallpaper/config.json, e.g. \"feh --bg-fill {path}\"."
             )
         result.done.append(DESKTOP)
     if target in (LOCK, BOTH):
@@ -253,8 +328,9 @@ SETTERS = {
     "xfce": _set_xfce,
     "lxqt": lambda p, t, r, res: _set_pcmanfm(p, t, r, res, qt=True),
     "lxde": lambda p, t, r, res: _set_pcmanfm(p, t, r, res, qt=False),
-    "sway": _set_sway,
-    "hyprland": _set_hyprland,
+    "sway": lambda p, t, r, res: _set_wayland(p, t, r, res, "sway"),
+    "hyprland": lambda p, t, r, res: _set_wayland(p, t, r, res, "hyprland"),
+    "niri": lambda p, t, r, res: _set_wayland(p, t, r, res, "niri"),
     "unknown": _set_generic,
 }
 

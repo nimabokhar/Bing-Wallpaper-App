@@ -6,6 +6,14 @@ While the apps are in alpha, expect rough edges and changes between builds.
 
 ## [Unreleased]
 
+## [0.3.2-alpha.1] - 2026-11-03
+
+### Linux
+
+- Works on niri. The app didn't recognise niri, so it had no way to set the wallpaper there.
+- When DankMaterialShell (DMS) is running, on niri, Hyprland, Sway or any other compositor, the wallpaper is set through DMS, so DMS's lock screen and colour theme follow it.
+- Without DMS, Wayland compositors try `awww` (the new name of `swww`) or `swww`, then Sway's or Hyprland's own tool, then `swaybg`, moving on to the next one if one fails (for example when the swww daemon isn't running).
+
 ## [0.3.1-alpha.1] - 2026-10-12
 
 ### Linux

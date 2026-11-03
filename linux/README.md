@@ -21,8 +21,11 @@ Sets your desktop wallpaper and lock screen to the [Bing image of the day](https
 | KDE Plasma 5 and 6 | yes | yes |
 | Cinnamon, MATE, Budgie | yes | yes (same image as the desktop) |
 | XFCE, LXQt, LXDE | yes | see below |
-| Sway, Hyprland (with `swww` or `hyprpaper`) | yes | see below |
-| Anything else with `feh`, `nitrogen` or `swww` | yes | see below |
+| Any desktop running DankMaterialShell (DMS), e.g. niri, Hyprland or Sway | yes | yes (DMS shows the same image) |
+| niri, Sway, Hyprland and other Wayland compositors (with `swaybg`, `awww`/`swww`, or `hyprpaper` on Hyprland) | yes | see below |
+| Anything else on X11 with `feh` or `nitrogen` | yes | see below |
+
+When DankMaterialShell is running, the app sets the wallpaper through DMS (`dms ipc call wallpaper set`), so DMS's colour theme follows the new image too. Without DMS it tries `awww`/`swww` (if its daemon is running), then Sway's or Hyprland's own tool, then starts `swaybg`.
 
 Where there is no standard lock screen setting, the app keeps `~/.local/share/bing-wallpaper/lock.jpg` (and `wallpaper.jpg`) pointing at the current image. Point your screen locker at it, e.g. `swaylock -i ~/.local/share/bing-wallpaper/lock.jpg` or `path = ~/.local/share/bing-wallpaper/lock.jpg` in `hyprlock.conf`.
 
