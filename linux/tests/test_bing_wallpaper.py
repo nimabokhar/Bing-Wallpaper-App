@@ -128,12 +128,14 @@ class DetectTest(unittest.TestCase):
             "LXQt": "lxqt",
             "sway": "sway",
             "Hyprland": "hyprland",
+            "niri": "niri",
             "": "unknown",
         }
         for value, expected in cases.items():
             with self.subTest(value=value):
                 self.assertEqual(desktop.detect({"XDG_CURRENT_DESKTOP": value}), expected)
         self.assertEqual(desktop.detect({"SWAYSOCK": "/run/sway"}), "sway")
+        self.assertEqual(desktop.detect({"NIRI_SOCKET": "/run/niri.sock"}), "niri")
 
 
 class SetterTest(TempHome):
@@ -203,6 +205,61 @@ class SetterTest(TempHome):
         self.assertEqual(len(sets), 2)
         self.assertEqual(result.done, [desktop.DESKTOP])
         self.assertIn("lock.jpg", result.notes[0])
+
+    def failing_runner(self, fail):
+        """Like runner(), but commands starting with any prefix in `fail` raise."""
+        def run(cmd):
+            self.calls.append(list(cmd))
+            if any(list(cmd[:len(f)]) == list(f) for f in fail):
+                raise desktop.WallpaperError(f"{cmd[0]} failed")
+            return ""
+
+        return run
+
+    def test_niri_prefers_dms(self):
+        with mock.patch.object(desktop.shutil, "which", lambda name: name):
+            result = desktop.set_wallpaper(self.path, desktop.BOTH, desktop="niri", run_=self.runner())
+        self.assertEqual(self.calls[-1], ["dms", "ipc", "call", "wallpaper", "set", str(self.path)])
+        self.assertFalse(any(c[0] in ("awww", "swww", "swaybg") for c in self.calls))
+        self.assertEqual(result.done, [desktop.DESKTOP, desktop.LOCK])
+
+    def test_hyprland_and_sway_prefer_dms_too(self):
+        for name in ("hyprland", "sway"):
+            with self.subTest(name=name):
+                self.calls.clear()
+                with mock.patch.object(desktop.shutil, "which", lambda n: n):
+                    desktop.set_wallpaper(self.path, desktop.DESKTOP, desktop=name, run_=self.runner())
+                self.assertEqual(self.calls[-1][:5], ["dms", "ipc", "call", "wallpaper", "set"])
+
+    def test_niri_without_dms_uses_awww(self):
+        run = self.failing_runner([("dms",)])
+        with mock.patch.object(desktop.shutil, "which", lambda name: name if name in ("dms", "awww") else None):
+            result = desktop.set_wallpaper(self.path, desktop.BOTH, desktop="niri", run_=run)
+        self.assertEqual(self.calls[-1], ["awww", "img", str(self.path)])
+        self.assertEqual(result.done, [desktop.DESKTOP])
+        self.assertIn("lock.jpg", result.notes[0])
+
+    def test_niri_falls_back_to_swaybg(self):
+        run = self.failing_runner([("swww",)])
+        spawned = []
+        with mock.patch.object(desktop.shutil, "which", lambda name: name if name in ("swww", "swaybg") else None), \
+                mock.patch.object(desktop, "spawn_swaybg", spawned.append):
+            result = desktop.set_wallpaper(self.path, desktop.DESKTOP, desktop="niri", run_=run)
+        self.assertEqual(self.calls, [["swww", "img", str(self.path)]])
+        self.assertEqual(spawned, [self.path])
+        self.assertEqual(result.done, [desktop.DESKTOP])
+
+    def test_niri_with_nothing_installed_explains(self):
+        with mock.patch.object(desktop.shutil, "which", lambda name: None):
+            with self.assertRaises(desktop.WallpaperError) as ctx:
+                desktop.set_wallpaper(self.path, desktop.BOTH, desktop="niri", run_=self.runner())
+        self.assertIn("swaybg", str(ctx.exception))
+
+    def test_unknown_wayland_uses_dms(self):
+        with mock.patch.dict(desktop.os.environ, {"WAYLAND_DISPLAY": "wayland-1"}), \
+                mock.patch.object(desktop.shutil, "which", lambda name: name if name == "dms" else None):
+            desktop.set_wallpaper(self.path, desktop.BOTH, desktop="unknown", run_=self.runner())
+        self.assertEqual(self.calls[-1][:5], ["dms", "ipc", "call", "wallpaper", "set"])
 
     def test_custom_command(self):
         result = desktop.set_wallpaper(self.path, desktop.BOTH, custom_command="swww img {path}",
