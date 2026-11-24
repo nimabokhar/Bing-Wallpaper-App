@@ -6,6 +6,14 @@ While the apps are in alpha, expect rough edges and changes between builds.
 
 ## [Unreleased]
 
+## [0.3.3-alpha.1] - 2026-11-24
+
+### Linux
+
+- Fixes DankMaterialShell showing `matugen dry-run failed ... Could not get source color from image ... No such file or directory`. The app deletes downloaded images it no longer needs, and it could delete one DMS still remembered (in its session, per monitor, or for light or dark mode). DMS reads that image again on its own, for example at login or when it switches between light and dark, and failed when it was gone. The app now keeps every image DMS refers to.
+- If DMS already points at one of the app's images that is missing, the next update (at login or from the timer) sets today's image again instead of waiting for Bing's next one.
+- If DMS changes the wallpaper but can't update its colours from it, the wallpaper now counts as set and the app shows a note, instead of reporting that setting the wallpaper failed.
+
 ## [0.3.2-alpha.1] - 2026-11-03
 
 ### Linux

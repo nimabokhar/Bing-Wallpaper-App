@@ -8,7 +8,7 @@ import shlex
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence
+from typing import Callable, Iterator, List, Optional, Sequence
 
 DESKTOP = "desktop"
 LOCK = "lock"
@@ -206,6 +206,76 @@ def _dms_running(run_: Runner) -> bool:
         return False
 
 
+def _dms_current(run_: Runner) -> Optional[str]:
+    try:
+        return run_(["dms", "ipc", "call", "wallpaper", "get"]).strip() or None
+    except WallpaperError:
+        return None
+
+
+def _same_file(a: str, b: Path) -> bool:
+    try:
+        return Path(a).expanduser().resolve() == b.resolve()
+    except OSError:
+        return False
+
+
+def _set_dms(path: Path, run_: Runner, result: Result) -> None:
+    """Sets the wallpaper through DMS. DMS also regenerates its colour theme from the
+    image with matugen, and can report that step's failure as an error even though the
+    wallpaper itself changed. The wallpaper is what we were asked for, so a colour
+    failure becomes a note rather than an error."""
+    try:
+        run_(["dms", "ipc", "call", "wallpaper", "set", str(path)])
+    except WallpaperError as e:
+        current = _dms_current(run_)
+        if not current or not _same_file(current, path):
+            raise
+        result.notes.append(
+            "DankMaterialShell changed the wallpaper but couldn't update its colours from it: "
+            + str(e).splitlines()[-1].strip()
+        )
+
+
+def dms_session_files() -> List[Path]:
+    state = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state")
+    config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    return [state / "DankMaterialShell" / "session.json", config / "DankMaterialShell" / "settings.json"]
+
+
+def _json_strings(value: object) -> Iterator[str]:
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for v in value.values():
+            yield from _json_strings(v)
+    elif isinstance(value, list):
+        for v in value:
+            yield from _json_strings(v)
+
+
+def dms_wallpapers(run_: Optional[Runner] = None) -> List[Path]:
+    """Every image path DankMaterialShell refers to: the wallpaper it shows now, plus
+    any it saved in its session or settings (per-monitor and light/dark wallpapers).
+    DMS reads these again on its own, e.g. at login or when it switches between light
+    and dark, so they must stay on disk."""
+    paths: List[Path] = []
+    current = _dms_current(run_ or run) if shutil.which("dms") else None
+    if current:
+        paths.append(Path(current).expanduser())
+    for f in dms_session_files():
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for s in _json_strings(data):
+            if s.startswith("file://"):
+                s = s[len("file://"):]
+            if s.startswith("/") and s.lower().endswith((".jpg", ".jpeg", ".png")):
+                paths.append(Path(s))
+    return paths
+
+
 SWAYBG_UNIT = "bing-wallpaper-swaybg"
 
 
@@ -244,7 +314,7 @@ def _set_wayland(path: Path, target: str, run_: Runner, result: Result, name: st
     awww/swww, the compositor's own tool, then swaybg."""
     if _dms_running(run_):
         # DMS draws the wallpaper itself and its lock screen shows the same image.
-        run_(["dms", "ipc", "call", "wallpaper", "set", str(path)])
+        _set_dms(path, run_, result)
         result.done += [DESKTOP, LOCK] if target == BOTH else [target]
         if target != BOTH:
             result.notes.append("DankMaterialShell uses the same image for the desktop and lock screen.")
