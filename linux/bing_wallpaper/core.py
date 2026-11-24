@@ -55,18 +55,28 @@ def _link(name: str, target: Path) -> None:
         pass
 
 
+def _resolve(path: Path) -> Optional[Path]:
+    try:
+        return path.resolve()
+    except OSError:
+        return None
+
+
 def _prune() -> None:
     folder = settings.data_dir() / "images"
-    in_use = set()
-    for name in ("wallpaper.jpg", "lock.jpg"):
-        try:
-            in_use.add((settings.data_dir() / name).resolve())
-        except OSError:
-            pass
+    # Images the desktop may still read: ours, and any DankMaterialShell remembers
+    # (it re-reads them later, e.g. at login, and fails if they're gone).
+    candidates = [settings.data_dir() / n for n in ("wallpaper.jpg", "lock.jpg")] + desktop.dms_wallpapers()
+    in_use = {_resolve(p) for p in candidates} - {None}
     files = sorted(folder.glob("*.jpg"), key=lambda p: p.stat().st_mtime, reverse=True)
     for old in files[KEEP_IMAGES:]:
-        if old.resolve() not in in_use:
+        if _resolve(old) not in in_use:
             old.unlink(missing_ok=True)
+
+
+def _dms_image_missing() -> bool:
+    folder = settings.data_dir() / "images"
+    return any(p.parent == folder and not p.exists() for p in desktop.dms_wallpapers())
 
 
 def current_desktop(state: settings.State) -> str:
@@ -124,6 +134,10 @@ def update(force: bool = False, now: Optional[datetime.datetime] = None) -> Opti
     """
     cfg = settings.Settings()
     state = settings.State()
+    # DankMaterialShell pointing at one of our images that is gone (older versions
+    # could delete it) makes DMS fail every time it rebuilds its colours, so put
+    # today's image back right away.
+    force = force or _dms_image_missing()
     daily_time = cfg.get("daily_time")
     due = None
     if daily_time and not force:

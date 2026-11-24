@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import tempfile
@@ -261,6 +262,37 @@ class SetterTest(TempHome):
             desktop.set_wallpaper(self.path, desktop.BOTH, desktop="unknown", run_=self.runner())
         self.assertEqual(self.calls[-1][:5], ["dms", "ipc", "call", "wallpaper", "set"])
 
+    def test_dms_colour_failure_still_sets_wallpaper(self):
+        def run(cmd):
+            self.calls.append(list(cmd))
+            if cmd[3:5] == ["wallpaper", "set"]:
+                raise desktop.WallpaperError("server error: matugen dry-run failed\nFailed to get source color.")
+            return str(self.path) + "\n"
+
+        with mock.patch.object(desktop.shutil, "which", lambda name: name):
+            result = desktop.set_wallpaper(self.path, desktop.BOTH, desktop="niri", run_=run)
+        self.assertEqual(result.done, [desktop.DESKTOP, desktop.LOCK])
+        self.assertIn("couldn't update its colours", result.notes[0])
+
+    def test_dms_failure_that_left_old_wallpaper_is_an_error(self):
+        def run(cmd):
+            self.calls.append(list(cmd))
+            if cmd[3:5] == ["wallpaper", "set"]:
+                raise desktop.WallpaperError("dms failed")
+            return "/somewhere/else.jpg"
+
+        with mock.patch.object(desktop.shutil, "which", lambda name: name):
+            with self.assertRaises(desktop.WallpaperError):
+                desktop.set_wallpaper(self.path, desktop.BOTH, desktop="niri", run_=run)
+
+    def test_dms_wallpapers_reads_session(self):
+        session = desktop.dms_session_files()[0]
+        session.parent.mkdir(parents=True)
+        session.write_text(json.dumps({"wallpaperPath": "/a/b.jpg", "monitorWallpapers": {"DP-1": "file:///c/d.jpg"},
+                                       "other": "/not/an/image.txt"}))
+        with mock.patch.object(desktop.shutil, "which", lambda name: None):
+            self.assertEqual(desktop.dms_wallpapers(), [Path("/a/b.jpg"), Path("/c/d.jpg")])
+
     def test_custom_command(self):
         result = desktop.set_wallpaper(self.path, desktop.BOTH, custom_command="swww img {path}",
                                        run_=self.runner())
@@ -307,6 +339,28 @@ class UpdateTest(TempHome):
         core.apply(images[1], desktop.BOTH, newest_id=images[0].id)
         self.assertIsNone(core.update())
         self.assertEqual(settings.State().get("last_applied"), "OHR.Yesterday_EN-US456")
+
+    def test_prune_keeps_images_dms_remembers(self):
+        folder = settings.data_dir() / "images"
+        folder.mkdir(parents=True)
+        files = []
+        for i in range(core.KEEP_IMAGES + 3):
+            f = folder / f"OHR.Old{i}.jpg"
+            f.write_bytes(JPEG)
+            os.utime(f, (1000 + i, 1000 + i))
+            files.append(f)
+        oldest = files[0]
+        with mock.patch.object(desktop, "dms_wallpapers", lambda run_=None: [oldest]):
+            core._prune()
+        self.assertTrue(oldest.exists())
+        self.assertFalse(files[1].exists())
+
+    def test_update_restores_missing_dms_image(self):
+        core.update()
+        gone = settings.data_dir() / "images" / "OHR.Gone_EN-US1.jpg"
+        with mock.patch.object(desktop, "dms_wallpapers", lambda run_=None: [gone]):
+            self.assertEqual(core.update().id, "OHR.Today_EN-US123")
+        self.assertEqual(len(self.applied), 2)
 
     def test_symlinks_point_at_current_image(self):
         images = bing.parse_archive(ARCHIVE)
